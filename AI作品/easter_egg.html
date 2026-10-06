@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>隐藏彩蛋 - 重庆大学校园社区</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+      background: #fff;
+      color: #1e293b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    /* 大彩蛋图标：轻柔上下漂浮，仪式感淡入 */
+    .egg {
+      font-size: 6rem;
+      line-height: 1;
+      animation: eggFloat 2.4s ease-in-out infinite, eggIn 1s ease both;
+      user-select: none;
+    }
+    @keyframes eggFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-14px); }
+    }
+    @keyframes eggIn {
+      from { opacity: 0; filter: blur(6px); }
+      to   { opacity: 1; filter: blur(0); }
+    }
+
+    .egg-text {
+      margin-top: 26px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #475569;
+      letter-spacing: 1px;
+      text-align: center;
+      animation: eggIn 1s ease .3s both;
+    }
+
+    /* 底部很小的返回链接 */
+    .back-home {
+      position: fixed;
+      bottom: 20px;
+      font-size: .76rem;
+      color: #999;
+      text-decoration: none;
+      letter-spacing: 1px;
+      transition: color .15s ease;
+      animation: eggIn 1s ease .6s both;
+    }
+    .back-home:hover { color: #4f46e5; }
+  </style>
+</head>
+<body>
+  <div class="egg">🪺</div>
+  <p class="egg-text">这么对作者感兴趣，连这个彩蛋都找得到～</p>
+  <a class="back-home" href="index.html">← 返回首页</a>
+</body>
+</html>

@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>重庆大学校园社区</title>
+  <script src="ai-core.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 60%);
+      position: relative;
+    }
+
+    /* ---------- 顶部校训（衬线字 + 蓝紫渐变 + 缓缓浮现动画） ---------- */
+    .motto {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      margin-bottom: 14px;
+      font-family: "KaiTi", "STKaiti", "Kaiti SC", "STSong", "SimSun", serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .motto-item {
+      letter-spacing: 4px;
+      background: linear-gradient(120deg, #1e3a8a 0%, #4f46e5 55%, #7c3aed 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      /* 渐变字上不能用 text-shadow（会透出糊底），用 drop-shadow 做立体感 */
+      filter: drop-shadow(0 2px 3px rgba(79, 70, 229, .28));
+      /* 基础态可见 + backwards：延迟期内显示 from 态；动画被禁用时文字依然完整可见 */
+      animation: mottoIn 1.3s ease backwards;
+    }
+    /* 四组词依次浮现，仪式感 */
+    .motto-item:nth-child(1) { animation-delay: .1s; }
+    .motto-item:nth-child(3) { animation-delay: .45s; }
+    .motto-item:nth-child(5) { animation-delay: .8s; }
+    .motto-item:nth-child(7) { animation-delay: 1.15s; }
+    .motto-dot {
+      color: #a5b4fc;
+      font-size: .8rem;
+      animation: mottoIn 1s ease backwards;
+    }
+    .motto-dot:nth-child(2) { animation-delay: .35s; }
+    .motto-dot:nth-child(4) { animation-delay: .7s; }
+    .motto-dot:nth-child(6) { animation-delay: 1.05s; }
+    @keyframes mottoIn {
+      /* 不用 opacity 起步：系统"减少动态效果"或动画被禁用时文字也绝不隐形，
+         用 雾化blur + 上浮 实现同样的缓缓浮现仪式感 */
+      from { transform: translateY(12px); filter: blur(6px); }
+      to   { transform: translateY(0);    filter: blur(0); }
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      color: #1e293b;
+      letter-spacing: 3px;
+      margin-bottom: 14px;
+    }
+
+    .subtitle {
+      color: #64748b;
+      font-size: 1rem;
+      margin-bottom: 52px;
+      letter-spacing: 4px;
+    }
+
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 28px;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 190px;
+      padding: 42px 20px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(30, 41, 59, 0.08);
+      text-decoration: none;
+      color: #1e293b;
+      font-size: 1.25rem;
+      font-weight: 600;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 14px 30px rgba(79, 70, 229, 0.16);
+    }
+
+    .card .icon {
+      font-size: 2.6rem;
+      margin-bottom: 14px;
+    }
+
+    /* ---------- 个人中心（左上角胶囊） ---------- */
+    .user-widget {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 100;
+      font-size: .88rem;
+    }
+
+    .user-capsule {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 50px;
+      box-shadow: 0 4px 14px rgba(30, 41, 59, .10);
+      padding: 7px 14px;
+      cursor: pointer;
+      user-select: none;
+      transition: background .15s ease;
+    }
+    .user-capsule:hover { background: #f8fafc; }
+    .user-capsule .arrow { transition: transform .2s ease; }
+    .user-capsule.open .arrow { transform: rotate(180deg); }
+
+    .user-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      width: 260px;
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(30, 41, 59, .14);
+      padding: 16px;
+      animation: panelIn .2s ease both;
+    }
+    .user-panel.open { display: block; }
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .panel-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 0;
+      color: #475569;
+      font-size: .86rem;
+    }
+    .panel-row .label { color: #94a3b8; min-width: 62px; }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      background: #f1f5f9;
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #4f46e5;
+      border-radius: 5px;
+      transition: width .3s ease;
+    }
+
+    .switch-role {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      border: none;
+      background: #4f46e5;
+      color: #fff;
+      border-radius: 10px;
+      padding: 9px 0;
+      font-family: inherit;
+      font-size: .88rem;
+      cursor: pointer;
+      transition: background .15s ease;
+    }
+    .switch-role:hover { background: #4338ca; }
+    /* 认证学生领袖按钮：金色调，与管理员靛蓝区分 */
+    .switch-leader { background: linear-gradient(135deg, #d97706, #f59e0b); }
+    .switch-leader:hover { background: linear-gradient(135deg, #b45309, #d97706); }
+
+    .panel-link {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: transparent;
+      padding: 8px 0;
+      color: #64748b;
+      font-family: inherit;
+      font-size: .84rem;
+      cursor: pointer;
+      border-top: 1px solid #f1f5f9;
+      margin-top: 6px;
+    }
+    .panel-link:hover { color: #4f46e5; }
+    a.panel-link { text-decoration: none; }
+
+    .panel-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #e2e8f0;
+    }
+    .panel-avatar-placeholder {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    .avatar-hint {
+      font-size: .72rem;
+      color: #94a3b8;
+      padding: 2px 0 6px;
+    }
+    /* 等级称号：颜色严格取等级表；Lv1 白色在浅底上加一圈浅灰描影保证可见 */
+    .lv-name { font-weight: 700; }
+    .lv-name.lv1 { text-shadow: 0 0 1px #94a3b8, 0 0 2px #cbd5e1; }
+    .admin-level-note { color: #b45309; font-size: .84rem; padding: 7px 0; }
+
+    /* ---------- 管理员演示调试面板（浅色底区分，不突兀） ---------- */
+    .debug-panel {
+      margin-top: 8px;
+      padding: 10px;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+    }
+    .debug-title { font-size: .76rem; color: #64748b; font-weight: 600; margin-bottom: 8px; }
+    .debug-preview {
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 9px;
+    }
+    .debug-preview .dp-row { font-size: .76rem; color: #64748b; line-height: 1.6; }
+    .debug-preview .dp-lv { font-weight: 700; }
+    .debug-preview .dp-lv.lv1 { text-shadow: 0 0 1px #94a3b8, 0 0 2px #cbd5e1; }
+    .debug-preview .progress-track { height: 8px; margin-top: 5px; }
+    .debug-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .debug-btn {
+      flex: 1 1 0;
+      min-width: 72px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #475569;
+      border-radius: 8px;
+      padding: 6px 4px;
+      font-family: inherit;
+      font-size: .76rem;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .debug-btn:hover { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+    .debug-btn.warn:hover { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+
+    /* ---------- ⚙️ 账号设置：危险操作区 ---------- */
+    .danger-zone { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #fecaca; }
+    .wipe-btn {
+      width: 100%;
+      border: 1px solid #fecaca;
+      background: #fef2f2;
+      color: #dc2626;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-size: .84rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .wipe-btn:hover { background: #fee2e2; border-color: #fca5a5; box-shadow: 0 3px 10px rgba(220, 38, 38, .15); }
+
+    /* ---------- ✉️ 消息中心（右上角站内信） ---------- */
+    .mail-widget {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+    }
+    .mail-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 38px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 50px;
+      box-shadow: 0 4px 14px rgba(30, 41, 59, .10);
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: background .15s ease;
+    }
+    .mail-btn:hover { background: #f8fafc; }
+    /* 未读红点角标：absolute 定位在信封右上角，无未读时隐藏 */
+    .mail-badge {
+      position: absolute;
+      top: -4px;
+      right: -2px;
+      width: 10px;
+      height: 10px;
+      background: #ef4444;
+      border: 2px solid #fff;
+      border-radius: 50%;
+    }
+    .mail-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      width: 300px;
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(30, 41, 59, .14);
+      padding: 14px;
+      animation: panelIn .2s ease both;
+    }
+    .mail-panel.open { display: block; }
+    .mail-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .mail-head-title { font-size: .95rem; font-weight: 700; color: #1e293b; }
+    .mail-clear {
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      font-family: inherit;
+      font-size: .76rem;
+      padding: 4px 8px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .mail-clear:hover { color: #dc2626; background: #fef2f2; }
+    .mail-list { max-height: 320px; overflow-y: auto; }
+    .mail-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 8px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .mail-item:hover { background: #f8fafc; }
+    .mail-item + .mail-item { border-top: 1px solid #f1f5f9; }
+    .mail-item-dot {
+      flex: 0 0 auto;
+      width: 8px;
+      height: 8px;
+      margin-top: 6px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+    .mail-item-dot.read { background: transparent; }
+    .mail-item-title { font-size: .86rem; color: #1e293b; line-height: 1.5; }
+    .mail-item-date { font-size: .74rem; color: #94a3b8; margin-top: 2px; }
+    .mail-box { flex: 1; min-width: 0; }
+    .mail-empty { text-align: center; color: #94a3b8; font-size: .84rem; padding: 28px 0; }
+
+    /* 邮件“🔗 前往”按钮 */
+    .mail-go {
+      flex: 0 0 auto;
+      align-self: center;
+      border: 1px solid #c7d2fe;
+      background: #eef2ff;
+      color: #4f46e5;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: .76rem;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s, color .15s;
+    }
+    .mail-go:hover { background: #4f46e5; color: #fff; }
+
+    /* 消息中心标题红点（绑定 demoRedDots.hasUnreadMails） */
+    .mail-head-title { position: relative; }
+
+    /* ---------- 全局演示红点（四端统一样式） ---------- */
+    .g-red-dot {
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      width: 10px;
+      height: 10px;
+      background: red;
+      border-radius: 50%;
+      box-shadow: 0 0 5px red;
+      z-index: 2;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 64px;   /* 上移，避免遮挡底部作者署名 */
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1e293b;
+      color: #fff;
+      font-size: .85rem;
+      padding: 10px 18px;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(30, 41, 59, .25);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease, transform .25s ease;
+      z-index: 200;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ---------- 底部作者署名（低调、固定页脚；点击可触发隐藏彩蛋） ---------- */
+    .site-footer {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: .78rem;
+      color: #999;
+      letter-spacing: 1px;
+      z-index: 50;
+      animation: mottoIn 1.2s ease 1.4s backwards;   /* 署名最后缓缓浮现；动画禁用时也保证可见 */
+    }
+    /* 彩蛋链接：颜色不变蓝、不加下划线，仅悬停变小手 */
+    .site-footer a {
+      color: #999;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    /* ---------- 左下角 AI 悬浮陪伴助手（自包含 fixed 组件，不影响主布局） ---------- */
+    .ai-assistant {
+      position: fixed;
+      left: 22px;
+      bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 900;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .ai-orb {
+      position: relative;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      background: linear-gradient(135deg, #818cf8, #6366f1 55%, #8b5cf6);
+      box-shadow: 0 8px 22px rgba(99, 102, 241, .42);
+      animation: aiOrbFloat 2.6s ease-in-out infinite;
+      flex: none;
+    }
+    .ai-orb::after {            /* 呼吸光圈 */
+      content: "";
+      position: absolute;
+      width: 54px; height: 54px;
+      border-radius: 50%;
+      background: rgba(129, 140, 248, .35);
+      animation: aiOrbPulse 2.6s ease-out infinite;
+      z-index: -1;
+    }
+    @keyframes aiOrbFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-6px); }
+    }
+    @keyframes aiOrbPulse {
+      0%   { transform: scale(1); opacity: .7; }
+      70%  { transform: scale(1.55); opacity: 0; }
+      100% { transform: scale(1.55); opacity: 0; }
+    }
+    .ai-bubble {
+      background: #fff;
+      color: #4f46e5;
+      font-size: .82rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 16px 16px 16px 4px;
+      box-shadow: 0 6px 18px rgba(30, 41, 59, .14);
+      border: 1px solid #e0e7ff;
+      white-space: nowrap;
+      animation: aiBubbleBob 2.6s ease-in-out infinite;
+    }
+    @keyframes aiBubbleBob {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-4px); }
+    }
+    @media (max-width: 560px) {
+      .ai-bubble { display: none; }   /* 窄屏只留图标，避免遮挡内容 */
+    }
+
+    /* ---------- 四个 ❓ 引导按钮（统一圆圈风格） ---------- */
+    .help-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      color: #fff;
+      font-size: .7rem;
+      font-weight: 800;
+      cursor: pointer;
+      margin-left: 6px;
+      user-select: none;
+      transition: background .2s ease, transform .2s ease;
+      flex: none;
+    }
+    .help-icon:hover { background: #3b82f6; transform: scale(1.15); }
+
+    /* ---------- 通用提示弹窗 ---------- */
+    .tip-mask {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 980;
+      background: rgba(15, 23, 42, .42);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .tip-mask.open { display: flex; animation: tipMaskIn .18s ease both; }
+    @keyframes tipMaskIn { from { opacity: 0; } to { opacity: 1; } }
+    .tip-card {
+      position: relative;
+      width: 460px;
+      max-width: 92vw;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, .28);
+      padding: 24px 26px 22px;
+      animation: tipCardIn .22s ease both;
+    }
+    @keyframes tipCardIn {
+      from { opacity: 0; transform: translateY(14px) scale(.98); }
+      to   { opacity: 1; transform: translateY(0)    scale(1); }
+    }
+    .tip-title { font-size: 1.06rem; font-weight: 800; color: #1e293b; margin-bottom: 14px; padding-right: 30px; }
+    .tip-body { font-size: .9rem; color: #475569; line-height: 1.9; white-space: pre-wrap; }
+    .tip-close {
+      border: none;
+      font-family: inherit;
+      font-size: .86rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #3b82f6, #4f46e5);
+      border-radius: 10px;
+      padding: 9px 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, .28);
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .tip-close:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(59, 130, 246, .38); }
+    .tip-x {
+      position: absolute;
+      top: 14px; right: 14px;
+      border: none;
+      background: #f1f5f9;
+      color: #64748b;
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      font-size: .9rem;
+      cursor: pointer;
+      transition: background .15s ease, color .15s ease;
+    }
+    .tip-x:hover { background: #e2e8f0; color: #1e293b; }
+    .tip-actions { display: flex; justify-content: flex-end; margin-top: 18px; }
+
+    /* ---------- 右下角 AI全域指南按钮 ---------- */
+    .ai-guide-fab {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 900;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 50px;
+      padding: 8px 18px 8px 10px;
+      box-shadow: 0 8px 24px rgba(124, 58, 237, .22);
+      cursor: pointer;
+      user-select: none;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .ai-guide-fab:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(124, 58, 237, .32); }
+    .ai-guide-ico {
+      flex: none;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      box-shadow: 0 0 0 0 rgba(124, 58, 237, 0);
+      animation: aiGuideBreath 2.4s ease-in-out infinite;
+    }
+    @keyframes aiGuideBreath {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, .35); }
+      50%      { box-shadow: 0 0 0 8px rgba(124, 58, 237, 0); }
+    }
+    .ai-guide-label {
+      font-size: .78rem;
+      font-weight: 700;
+      color: #6d28d9;
+      white-space: nowrap;
+    }
+
+    /* ---------- AI全域指南弹窗 ---------- */
+    .ai-guide-tip-card { width: 540px; max-width: 95vw; }
+    .ai-guide-list { list-style: none; padding: 0; margin: 0; }
+    .ai-guide-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .ai-guide-item:last-child { border-bottom: none; }
+    .ai-guide-icon { font-size: 1.2rem; flex: none; line-height: 1.6; }
+    .ai-guide-desc { flex: 1; font-size: .88rem; color: #334155; line-height: 1.7; }
+    .ai-guide-desc strong { color: #1e293b; font-weight: 700; }
+    .ai-guide-link {
+      flex: none;
+      font-size: .78rem;
+      font-weight: 700;
+      color: #4f46e5;
+      background: #f5f3ff;
+      border: 1px solid #ddd6fe;
+      border-radius: 8px;
+      padding: 4px 10px;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background .15s ease;
+    }
+    .ai-guide-link:hover { background: #ede9fe; }
+    /* 无跳转按钮的条目：用小号灰字提示保持排版整齐 */
+    .ai-guide-note { color: #94a3b8; font-size: .76rem; }
+    @media (max-width: 560px) {
+      .ai-guide-label { display: none; }
+      .ai-guide-fab { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- ---------- 个人中心（左上角悬浮组件） ---------- -->
+  <div class="user-widget">
+    <div class="user-capsule" id="userCapsule">
+      <span class="icon" id="capsuleIcon">👤</span>
+      <span class="name" id="capsuleName">个人中心</span>
+      <span class="arrow">▼</span>
+    </div>
+    <div class="user-panel" id="userPanel">
+      <div class="panel-row"><span class="label">当前身份<span class="help-icon" id="helpRole" title="身份区分说明">?</span></span><span id="panelRole">👤 普通用户</span></div>
+      <div class="panel-row"><span class="label">昵称</span><span id="panelName">大一新生</span></div>
+      <div class="panel-row"><span class="label">头像</span><span id="panelAvatarBox"><span class="panel-avatar-placeholder">👤</span></span></div>
+      <div id="levelBlock">
+        <div class="panel-row"><span class="label"><span class="help-icon" id="helpLevel" title="等级与经验规则">?</span>当前等级</span><span class="lv-name" id="panelLevel">Lv.1 小白</span></div>
+        <div class="panel-row" style="flex-direction:column;align-items:flex-start;">
+          <span style="color:#94a3b8;">经验进度：<span id="expText">0 / 100</span></span>
+          <div class="progress-track"><div class="progress-fill" id="expBar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="admin-level-note" id="adminLevelNote" hidden>🛡️ 学校管理员（无等级体系）</div>
+      <button class="switch-role" id="switchRole">切换为管理员</button>
+      <button class="switch-role switch-leader" id="switchLeader">🏅 切换为认证学生领袖</button>
+      <button class="panel-link" id="editName">✏️ 修改昵称</button>
+      <button class="panel-link" id="uploadAvatar">📷 上传头像</button>
+      <div class="avatar-hint">建议上传小于1MB的图片</div>
+      <input type="file" id="avatarInput" accept="image/*" hidden>
+      <a class="panel-link" href="forum.html?filter=mine">我的发帖</a>
+      <a class="panel-link" href="circles.html?expand=1">🏠 我的圈子</a>
+      <div class="debug-panel" id="debugPanel" hidden>
+        <div class="debug-title">🛠️ 演示调试面板（仅管理员可见）</div>
+        <div class="debug-preview">
+          <div class="dp-row">模拟经验值：<span id="debugExpText">0</span></div>
+          <div class="progress-track"><div class="progress-fill" id="debugExpBar" style="width:0%"></div></div>
+          <div class="dp-row">模拟等级：<span class="dp-lv lv1" id="debugLevel">Lv.1 小白</span></div>
+        </div>
+        <div class="debug-btns">
+          <button type="button" class="debug-btn" id="debugAdd100">+100 经验</button>
+          <button type="button" class="debug-btn" id="debugMax">一键满级</button>
+          <button type="button" class="debug-btn warn" id="debugReset">重置经验</button>
+        </div>
+      </div>
+      <button class="panel-link" id="logoutBtn">退出登录</button>
+
+      <!-- ⚙️ 账号设置：危险操作区 -->
+      <div class="danger-zone">
+        <button type="button" class="wipe-btn" id="wipeAllBtn">🗑️ 清空我的所有数据</button>
+        <span class="help-icon" id="helpWipe" title="数据重置说明">?</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- 消息中心（右上角站内信） ---------- -->
+  <div class="mail-widget">
+    <button class="mail-btn" id="mailBtn" type="button" title="消息中心">
+      ✉️
+      <span class="mail-badge" id="mailBadge" hidden></span>
+    </button>
+    <div class="mail-panel" id="mailPanel">
+      <div class="mail-head">
+        <span class="mail-head-title">📬 消息中心<span class="g-red-dot" id="redDotMails" hidden></span></span>
+        <button class="mail-clear" id="mailClear" type="button">🗑️ 清除已读</button>
+      </div>
+      <div class="mail-list" id="mailList"></div>
+    </div>
+  </div>
+
+  <!-- ---------- 顶部校训（十六字真言，四组依次浮现） ---------- -->
+  <div class="motto" aria-label="重庆大学校训">
+    <span class="motto-item">研究学术</span>
+    <span class="motto-dot">·</span>
+    <span class="motto-item">造就人才</span>
+    <span class="motto-dot">·</span>
+    <span class="motto-item">佑启乡邦</span>
+    <span class="motto-dot">·</span>
+    <span class="motto-item">振导社会</span>
+  </div>
+
+  <h1>重庆大学校园社区</h1>
+  <p class="subtitle">学习 · 交流 · 共建</p>
+
+  <nav class="cards">
+    <a class="card" href="search.html">
+      <span class="icon">📚</span>
+      <span>信息库</span>
+    </a>
+    <a class="card" href="forum.html">
+      <span class="icon">💬</span>
+      <span>论坛</span>
+    </a>
+    <a class="card" href="vote.html">
+      <span class="icon">🗳️</span>
+      <span>投票</span>
+    </a>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- ---------- 底部作者署名（点击进入隐藏彩蛋页） ---------- -->
+  <footer class="site-footer">
+    <a href="easter_egg.html" target="_blank" rel="noopener noreferrer">👨‍💻 设计与开发：翔哥永远摆烂（QQ） &amp; 曹操是伏枥骥（微信）</a>
+  </footer>
+
+  <script>
+    // ---------- 个人中心逻辑 ----------
+    const capsule = document.getElementById('userCapsule');
+    const panel = document.getElementById('userPanel');
+    const capsuleName = document.getElementById('capsuleName');
+    const panelRole = document.getElementById('panelRole');
+    const panelLevel = document.getElementById('panelLevel');
+    const expText = document.getElementById('expText');
+    const expBar = document.getElementById('expBar');
+    const switchBtn = document.getElementById('switchRole');
+    const switchLeaderBtn = document.getElementById('switchLeader');
+    const toast = document.getElementById('toast');
+    let toastTimer = null;   // 提前声明：登录奖励升级提示可能在脚本初始化阶段就调用 showToast
+
+    // ---------- 全局演示红点状态（四端统一存 localStorage，清空数据后自动重置为全红） ----------
+    const DOTS_KEY = 'demoRedDots';
+    const DOTS_DEFAULT = {
+      hasUnreadVotes: true,
+      hasUnreadForum: true,
+      hasUnreadCircles: true,
+      hasUnreadMails: true
+    };
+    function getRedDots() {
+      try {
+        const d = JSON.parse(localStorage.getItem(DOTS_KEY));
+        if (d && typeof d === 'object') return Object.assign({}, DOTS_DEFAULT, d);
+      } catch (err) { /* 损坏时重置 */ }
+      localStorage.setItem(DOTS_KEY, JSON.stringify(DOTS_DEFAULT));
+      return Object.assign({}, DOTS_DEFAULT);
+    }
+    function setRedDot(key, value) {
+      const d = getRedDots();
+      d[key] = !!value;
+      localStorage.setItem(DOTS_KEY, JSON.stringify(d));
+    }
+
+    // ---------- ✉️ 消息中心（站内信，localStorage 持久化） ----------
+    const MAIL_KEY = 'mails';
+    // 时间格式化：YYYY-MM-DD HH:mm（补零）
+    function fmtMailDT(d) {
+      const p = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+    // 邮件1的时间：动态取 localStorage 中《校运动会新增项目意向》投票的截止时间；取不到则按 now-3天兜底
+    function sportsDeadlineText() {
+      try {
+        const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+        if (Array.isArray(polls)) {
+          const p = polls.find(x => x && x.question === '校运动会新增项目意向');
+          if (p && p.deadline) return String(p.deadline);
+        }
+      } catch (err) { /* 兜底 */ }
+      return fmtMailDT(new Date(Date.now() - 3 * 24 * 3600 * 1000));
+    }
+    // 三封固定演示邮件（含跳转目标）
+    function seedMails() {
+      return [
+        { id: 'demo_mail_1', title: '📊 你参与的投票结果出炉了', isRead: false, date: sportsDeadlineText(), target: 'vote' },
+        { id: 'demo_mail_2', title: '💬 有人回答了你', isRead: false, date: fmtMailDT(new Date(Date.now() - 2 * 3600 * 1000)), target: 'forum' },
+        { id: 'demo_mail_3', title: '🏠 你参加的圈子有人评论了', isRead: false, date: fmtMailDT(new Date(Date.now() - 10 * 60 * 1000)), target: 'circle' }
+      ];
+    }
+    // 读取邮件：
+    // · 键不存在（首次/清空数据后）→ 初始化三封固定邮件
+    // · 旧版两封邮件（非空且无 target）→ 自动迁移补入三封，用户其他邮件保留
+    // · 空数组是合法状态（用户已清除），不复活
+    function loadMails() {
+      const raw = localStorage.getItem(MAIL_KEY);
+      if (raw === null) return seedMails();
+      try {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          if (arr.length === 0) return arr;
+          if (!arr.some(m => m && m.target)) {
+            const seeds = seedMails();
+            const userMails = arr.filter(m => m && !String(m.id).startsWith('demo_mail_'));
+            return [...seeds, ...userMails];
+          }
+          return arr;
+        }
+      } catch (err) { /* 数据损坏时按首次访问处理 */ }
+      return seedMails();
+    }
+    function saveMails() { localStorage.setItem(MAIL_KEY, JSON.stringify(mails)); }
+    // 当前时间 → "YYYY-MM-DD HH:mm"
+    function mailNow() { return fmtMailDT(new Date()); }
+    let mails = loadMails();
+    saveMails();
+
+    const mailBtn = document.getElementById('mailBtn');
+    const mailBadge = document.getElementById('mailBadge');
+    const mailPanel = document.getElementById('mailPanel');
+    const mailList = document.getElementById('mailList');
+    const redDotMails = document.getElementById('redDotMails');
+
+    // 标题红点：与 demoRedDots.hasUnreadMails 同步
+    function syncMailTitleDot() {
+      redDotMails.hidden = !getRedDots().hasUnreadMails;
+    }
+
+    // 信封右上角红点：存在未读邮件才显示
+    function syncMailBadge() {
+      mailBadge.hidden = !mails.some(m => !m.isRead);
+    }
+
+    // 渲染邮件列表（只展示标题/时间/未读小红点，暂不做详情展开）
+    function renderMails() {
+      mailList.innerHTML = '';
+      if (!mails.length) {
+        const empty = document.createElement('div');
+        empty.className = 'mail-empty';
+        empty.textContent = '📭 暂无消息';
+        mailList.appendChild(empty);
+        return;
+      }
+      mails.forEach(m => {
+        const item = document.createElement('div');
+        item.className = 'mail-item';
+        const dot = document.createElement('span');
+        dot.className = 'mail-item-dot' + (m.isRead ? ' read' : '');
+        const box = document.createElement('div');
+        box.className = 'mail-box';
+        const t = document.createElement('div');
+        t.className = 'mail-item-title';
+        t.textContent = m.title;
+        const d = document.createElement('div');
+        d.className = 'mail-item-date';
+        d.textContent = m.date;
+        box.append(t, d);
+        item.append(dot, box);
+        // 固定邮件带“🔗 前往”：消除对应红点后用 JS 跳转到目标页面（不刷新当前文档交互）
+        if (m.target) {
+          const go = document.createElement('button');
+          go.type = 'button';
+          go.className = 'mail-go';
+          go.textContent = '🔗 前往';
+          go.addEventListener('click', ev => {
+            ev.stopPropagation();
+            // 仅跳转，不消除红点；目标页面需用户手动点击入口后才消
+            if (m.target === 'vote') {
+              window.location.href = 'vote.html?tab=participated';
+            } else if (m.target === 'forum') {
+              window.location.href = 'forum.html?filter=mine';
+            } else if (m.target === 'circle') {
+              window.location.href = 'circles.html?expand=1';
+            }
+          });
+          item.append(go);
+        }
+        // 点击某条邮件 → 标记该邮件已读（红点消失），同步落盘
+        item.addEventListener('click', () => {
+          if (m.isRead) return;
+          m.isRead = true;
+          saveMails();
+          renderMails();
+          syncMailBadge();
+        });
+        mailList.appendChild(item);
+      });
+    }
+
+    // 等级提升时自动投递一封未读邮件到最前面（供经验增加逻辑调用）
+    function pushLevelUpMail() {
+      mails.unshift({ id: Date.now(), title: '🎉 你的等级提升了！', isRead: false, date: mailNow() });
+      saveMails();
+      syncMailBadge();
+      renderMails();   // 面板若开着也即时刷新
+    }
+
+    // 点击信封：展开/收起面板；展开的同时全部标记已读，信封红点消失，并消除“消息中心”标题红点
+    mailBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = mailPanel.classList.toggle('open');
+      if (open) {
+        const hadUnread = mails.some(m => !m.isRead);
+        mails.forEach(m => { m.isRead = true; });
+        if (hadUnread) saveMails();
+        setRedDot('hasUnreadMails', false);
+        syncMailTitleDot();
+        syncMailBadge();
+        renderMails();
+      }
+    });
+
+    // 清除已读：清空整个 mails 数组，并保持消息中心红点为已消除状态
+    document.getElementById('mailClear').addEventListener('click', e => {
+      e.stopPropagation();
+      const before = mails.length;
+      mails = [];
+      saveMails();
+      setRedDot('hasUnreadMails', false);
+      syncMailTitleDot();
+      renderMails();
+      syncMailBadge();
+      showToast(before ? `已清除 ${before} 条消息` : '暂无消息可清除');
+    });
+
+    // 点击页面其他空白处自动收起消息面板
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.mail-widget')) mailPanel.classList.remove('open');
+    });
+
+    renderMails();
+    syncMailBadge();
+    syncMailTitleDot();
+
+    // ---------- 等级与经验：全部由 ai-core.js 引擎计算（等级表唯一数据源） ----------
+    // 管理员调试面板里的“模拟等级预览区”（管理员状态下主等级区隐藏，用这里看变化）
+    function refreshDebugPreview() {
+      const info = getLevelInfo(getExperience());
+      document.getElementById('debugExpText').textContent = info.exp;
+      document.getElementById('debugExpBar').style.width = info.percent.toFixed(1) + '%';
+      const lvEl = document.getElementById('debugLevel');
+      lvEl.textContent = `Lv.${info.lv} ${info.name}`;
+      lvEl.style.color = info.color;
+      lvEl.className = 'dp-lv' + (info.lv === 1 ? ' lv1' : '');
+    }
+
+    function refreshLevelUI() {
+      const isAdminNow = (localStorage.getItem('role') || 'user') === 'admin';
+      document.getElementById('levelBlock').hidden = isAdminNow;
+      document.getElementById('adminLevelNote').hidden = !isAdminNow;
+      document.getElementById('debugPanel').hidden = !isAdminNow;   // 调试面板仅管理员可见
+      if (isAdminNow) { refreshDebugPreview(); return; }
+
+      const info = getLevelInfo(getExperience());
+      panelLevel.textContent = `Lv.${info.lv} ${info.name}`;
+      panelLevel.style.color = info.color;                 // 严格按等级表配色
+      panelLevel.classList.toggle('lv1', info.lv === 1);  // Lv1 白色加浅灰描影
+      expText.textContent = info.nextExp === null
+        ? `${info.exp}（已达最高等级）`
+        : `${info.exp} / ${info.nextExp}`;
+      expBar.style.width = info.percent.toFixed(1) + '%';
+    }
+
+    // 身份恢复：从 localStorage 读取 role，默认普通用户
+    let role = localStorage.getItem('role') || 'user';
+    applyRole(role);
+    refreshLevelUI();
+
+    // 页面加载自动结算每日登录奖励（+2，每天仅一次）
+    const loginRes = addExperience('dailyLogin');
+    refreshLevelUI();
+    if (loginRes.leveledUp) {
+      showToast(`🎉 恭喜！等级提升至 Lv.${loginRes.level.lv} ${loginRes.level.name}！`);
+      pushLevelUpMail();   // 登录奖励导致升级 → 自动投递站内信并亮红点
+    }
+
+    // ---------- 昵称与头像：localStorage 持久化，刷新自动恢复 ----------
+    let userName = localStorage.getItem('userName') || '大一新生';
+    let userAvatar = localStorage.getItem('userAvatar') || '';
+
+    function refreshUserUI() {
+      document.getElementById('panelName').textContent = userName;
+      const box = document.getElementById('panelAvatarBox');
+      box.innerHTML = userAvatar
+        ? `<img class="panel-avatar" src="${userAvatar}" alt="头像">`
+        : '<span class="panel-avatar-placeholder">👤</span>';
+    }
+    refreshUserUI();
+
+    // 修改昵称
+    document.getElementById('editName').addEventListener('click', e => {
+      e.stopPropagation();
+      const n = window.prompt('请输入新昵称', userName);
+      if (n && n.trim()) {
+        userName = n.trim();
+        localStorage.setItem('userName', userName);
+        refreshUserUI();
+        showToast('昵称已更新为「' + userName + '」');
+      }
+    });
+
+    // 上传头像：FileReader 转 Base64 存入 localStorage
+    const avatarInput = document.getElementById('avatarInput');
+    document.getElementById('uploadAvatar').addEventListener('click', e => {
+      e.stopPropagation();
+      avatarInput.click();
+    });
+    avatarInput.addEventListener('change', () => {
+      const file = avatarInput.files[0];
+      if (!file) return;
+      if (file.size > 1024 * 1024) showToast('图片超过1MB，可能保存失败，建议换小一点的图');
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          localStorage.setItem('userAvatar', reader.result);
+          userAvatar = reader.result;
+          refreshUserUI();
+          showToast('头像已更新');
+        } catch (err) {
+          showToast('图片太大，浏览器存不下，请换更小的图片');
+        }
+      };
+      reader.readAsDataURL(file);
+      avatarInput.value = '';
+    });
+
+    function applyRole(r) {
+      const isAdmin = r === 'admin';
+      const isLeader = r === 'certified_leader';
+      document.getElementById('capsuleIcon').textContent = isAdmin ? '🛡️' : (isLeader ? '🏅' : '👤');
+      capsuleName.textContent = isAdmin ? '学校管理员' : (isLeader ? '认证学生领袖' : '个人中心');
+      panelRole.textContent = isAdmin
+        ? '🛡️ 学校管理员'
+        : (isLeader ? '🏅 认证学生领袖' : '👤 普通用户');
+      switchBtn.textContent = isAdmin ? '切换为普通用户' : '切换为管理员';
+      switchLeaderBtn.textContent = isLeader ? '🏅 切回普通用户' : '🏅 切换为认证学生领袖';
+      if (typeof refreshLevelUI === 'function') refreshLevelUI();
+    }
+
+    // 展开 / 收起面板
+    capsule.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = panel.classList.toggle('open');
+      capsule.classList.toggle('open', open);
+    });
+
+    // 点击页面其他空白处自动收起
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.user-widget')) {
+        panel.classList.remove('open');
+        capsule.classList.remove('open');
+      }
+    });
+
+    // 切换身份：管理员 ↔ 普通用户
+    switchBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      role = role === 'admin' ? 'user' : 'admin';
+      localStorage.setItem('role', role);
+      applyRole(role);
+      showToast(role === 'admin' ? '身份已切换为管理员，去论坛体验权限变化吧！' : '已切换为普通用户');
+    });
+
+    // 切换身份：认证学生领袖 ↔ 普通用户（独立于管理员，互不干扰）
+    switchLeaderBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      role = role === 'certified_leader' ? 'user' : 'certified_leader';
+      localStorage.setItem('role', role);
+      applyRole(role);
+      showToast(role === 'certified_leader'
+        ? '已切换为🏅 认证学生领袖（社团负责人），Lv.1 也可发起投票！'
+        : '已切换为普通用户');
+    });
+
+    // 占位按钮提示
+    document.querySelectorAll('[data-toast]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        showToast(btn.dataset.toast);
+      });
+    });
+
+    // ---------- 管理员演示调试面板：直接改经验值，立刻刷新等级显示（不刷新页面） ----------
+    function bindDebug(id, apply, msg, appendLevel) {
+      document.getElementById(id).addEventListener('click', e => {
+        e.stopPropagation();
+        const beforeLv = getLevelInfo(getExperience()).lv;
+        apply();
+        refreshLevelUI();
+        const after = getLevelInfo(getExperience());
+        if (after.lv > beforeLv) pushLevelUpMail();   // 等级提升（含+100/一键满级）→ 自动投递站内信
+        showToast(appendLevel !== false && after.lv > beforeLv
+          ? `${msg} 🎉 晋升 Lv.${after.lv} ${after.name}！`
+          : msg);
+      });
+    }
+    bindDebug('debugAdd100', () => setExperience(getExperience() + 100), '已增加100经验！');
+    bindDebug('debugMax', () => setExperience(10000), '已一键满级：Lv.6 百事通！', false);
+    bindDebug('debugReset', () => setExperience(0), '经验已重置为0，回到 Lv.1 小白', false);
+
+    // 退出登录：清空昵称/头像，身份重置为普通用户，面板即时恢复默认（不刷新页面）
+    document.getElementById('logoutBtn').addEventListener('click', e => {
+      e.stopPropagation();
+      if (!window.confirm('确定要退出当前账号吗？')) return;   // 取消：面板保持展开，什么都不做
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userAvatar');
+      localStorage.setItem('role', 'user');
+      userName = '大一新生';
+      userAvatar = '';
+      role = 'user';
+      applyRole(role);
+      refreshUserUI();
+      showToast('已退出登录');
+    });
+
+    // ---------- ⚙️ 清空我的所有数据（双重确认） ----------
+    // 此功能仅清除本设备本地数据，供测试和隐私保护演示使用。
+    document.getElementById('wipeAllBtn').addEventListener('click', e => {
+      e.stopPropagation();
+      // 第一次确认
+      if (!window.confirm('⚠️ 警告：此操作将永久删除你在这个设备上发布的所有帖子、评论、投票、个人资料及经验值，且不可恢复！确定要继续吗？')) return;
+      // 第二次确认（防误触）
+      if (!window.confirm('⚠️ 二次确认：数据无价，请再次确认是否要彻底清空？')) return;
+
+      // 彻底清空：本作品所有业务数据（论坛/投票/个人资料/经验/红点/消息，
+      // 以及信息库手动导入通知 infoUserNotices 等）全部存于 localStorage，
+      // 直接 clear() 保证无任何遗漏键；刷新后各页面恢复内置预设演示数据。
+      try {
+        localStorage.clear();
+      } catch (err) {
+        // 极端环境 clear 失败时，退化为逐个删除所有已知业务键（含信息库导入数据）
+        const keepKeys = [];   // 白名单为空：业务相关键全部清除
+        Object.keys(localStorage).forEach(k => {
+          if (!keepKeys.includes(k)) localStorage.removeItem(k);
+        });
+      }
+
+      // 反馈后整体刷新，所有内存与界面状态归零
+      window.alert('✅ 数据已彻底清空，即将刷新页面恢复初始状态。');
+      window.location.reload();
+    });
+
+    // 轻提示
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+  </script>
+
+  <!-- 左下角 AI 悬浮陪伴助手：点击进入 AI 聊天室 -->
+  <a class="ai-assistant" href="ai-chat.html" title="和AI聊聊天">
+    <span class="ai-orb">🤖</span>
+    <span class="ai-bubble">点击我来陪你聊聊天~</span>
+  </a>
+
+  <!-- ---------- 右下角：AI全域指南悬浮按钮 ---------- -->
+  <div class="ai-guide-fab" id="aiGuideFab" role="button" tabindex="0" title="AI全域指南">
+    <span class="ai-guide-ico">🤖✨</span>
+    <span class="ai-guide-label">AI全域指南</span>
+  </div>
+
+  <!-- ---------- 通用提示弹窗（三个 ❓ 引导按钮共用） ---------- -->
+  <div class="tip-mask" id="tipMask" role="dialog" aria-modal="true">
+    <div class="tip-card" id="tipCard">
+      <button type="button" class="tip-x" id="tipCloseX" aria-label="关闭">✕</button>
+      <div class="tip-title" id="tipTitle"></div>
+      <div class="tip-body" id="tipBody"></div>
+      <div class="tip-actions">
+        <button type="button" class="tip-close" id="tipClose">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- AI全域指南弹窗 ---------- -->
+  <div class="tip-mask" id="aiGuideMask" role="dialog" aria-modal="true">
+    <div class="tip-card ai-guide-tip-card">
+      <button type="button" class="tip-x" id="aiGuideCloseX" aria-label="关闭">✕</button>
+      <div class="tip-title">✨ 本平台五处AI增强能力</div>
+      <ul class="ai-guide-list">
+        <li class="ai-guide-item">
+          <span class="ai-guide-icon">💬</span>
+          <div class="ai-guide-desc"><strong>AI情绪陪伴（首页左下角）</strong><br>提供树洞聊天与新手引导。</div>
+          <a class="ai-guide-link" href="ai-chat.html">👉 去体验</a>
+        </li>
+        <li class="ai-guide-item">
+          <span class="ai-guide-icon">🔍</span>
+          <div class="ai-guide-desc"><strong>AI语义搜索（全板块通用）</strong><br>不搜关键词，直接理解你的问题并总结。<span class="ai-guide-note">（在论坛 / 圈子 / 信息库顶部搜索框均可直接使用）</span></div>
+        </li>
+        <li class="ai-guide-item">
+          <span class="ai-guide-icon">📥</span>
+          <div class="ai-guide-desc"><strong>AI信息治理（信息库管理员专属）</strong><br>自动分类并拟定官方公文标题。</div>
+          <a class="ai-guide-link" href="search.html">👉 去体验</a>
+        </li>
+        <li class="ai-guide-item">
+          <span class="ai-guide-icon">🤖</span>
+          <div class="ai-guide-desc"><strong>AI自动回复（论坛内问复）</strong><br>@AI小助手，它能阅读帖子并给出建议。</div>
+          <a class="ai-guide-link" href="forum.html">👉 去体验</a>
+        </li>
+        <li class="ai-guide-item">
+          <span class="ai-guide-icon">🎯</span>
+          <div class="ai-guide-desc"><strong>AI性格测试选社团（圈子左下角）</strong><br>5道题测出适合你的社团类型。</div>
+          <a class="ai-guide-link" href="circles.html">👉 去体验</a>
+        </li>
+      </ul>
+      <div class="tip-actions">
+        <button type="button" class="tip-close" id="aiGuideClose">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- 引导与说明系统：三个 ❓ 提示弹窗 + AI全域指南 ----------
+    (function () {
+      const tipMask = document.getElementById('tipMask');
+      const tipCard = document.getElementById('tipCard');
+      const tipTitle = document.getElementById('tipTitle');
+      const tipBody = document.getElementById('tipBody');
+
+      const TIPS = {
+        level: {
+          title: '🏅 等级与经验规则',
+          body: '用户通过发帖、回复、每日登录等行为积累经验值。经验值达到一定数值后会自动提升等级（Lv.1 小白 至 Lv.6 百事通）。等级越高，在论坛的发帖和评论旁展示的专属彩色标签越显眼，且 Lv.4 及以上的用户可解锁“发起投票”的权限。积极参与社区互动，即可从萌新成长为百事通大佬！'
+        },
+        role: {
+          title: '👥 身份区分系统',
+          body: '本平台分为三种身份：\n1. 👤 普通用户：默认身份，拥有等级体系，可浏览发帖、投票。\n2. 🛡️ 学校管理员：无等级体系，拥有后台信息导入、内容审核、发布置顶投票的最高权限。\n3. 🏅 认证学生领袖：需官方认证（如社团社长），保留等级体系，但可无视等级限制直接发起社团投票。',
+          side: true   // 在按钮右侧弹出，避免遮挡面板
+        },
+        wipe: {
+          title: '🗑️ 数据重置说明',
+          body: '点击此按钮将彻底清空您在本设备上的所有个性化数据（包括等级、帖子、投票记录等），并将网站恢复到最初始的演示状态。在参加比赛演示时，您可以随时使用此功能重置所有数据。'
+        }
+      };
+
+      function openTip(key, anchor) {
+        const tip = TIPS[key];
+        tipTitle.textContent = tip.title;
+        tipBody.textContent = tip.body;
+        // 身份说明弹窗：定位到按钮右侧，避免遮挡面板内容
+        if (tip.side && anchor) {
+          const r = anchor.getBoundingClientRect();
+          tipCard.style.position = 'fixed';
+          tipCard.style.left = Math.min(r.right + 16, window.innerWidth - 480) + 'px';
+          tipCard.style.top = Math.max(16, r.top - 20) + 'px';
+        } else {
+          tipCard.style.position = '';
+          tipCard.style.left = '';
+          tipCard.style.top = '';
+        }
+        tipMask.classList.add('open');
+      }
+      function closeTip() { tipMask.classList.remove('open'); }
+
+      document.getElementById('helpLevel').addEventListener('click', e => { e.stopPropagation(); openTip('level', e.currentTarget); });
+      document.getElementById('helpRole').addEventListener('click', e => { e.stopPropagation(); openTip('role', e.currentTarget); });
+      document.getElementById('helpWipe').addEventListener('click', e => { e.stopPropagation(); openTip('wipe', e.currentTarget); });
+      document.getElementById('tipClose').addEventListener('click', closeTip);
+      document.getElementById('tipCloseX').addEventListener('click', closeTip);
+      tipMask.addEventListener('click', e => { if (e.target === tipMask) closeTip(); });
+
+      // AI全域指南弹窗
+      const aiGuideMask = document.getElementById('aiGuideMask');
+      const aiGuideFab = document.getElementById('aiGuideFab');
+      function openGuide() { aiGuideMask.classList.add('open'); }
+      function closeGuide() { aiGuideMask.classList.remove('open'); }
+      aiGuideFab.addEventListener('click', openGuide);
+      aiGuideFab.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openGuide(); }
+      });
+      document.getElementById('aiGuideClose').addEventListener('click', closeGuide);
+      document.getElementById('aiGuideCloseX').addEventListener('click', closeGuide);
+      aiGuideMask.addEventListener('click', e => { if (e.target === aiGuideMask) closeGuide(); });
+
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { closeTip(); closeGuide(); }
+      });
+    })();
+  </script>
+</body>
+</html>

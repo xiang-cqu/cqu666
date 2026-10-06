@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>校园投票 - 重庆大学校园社区</title>
+  <script src="ai-core.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 60%);
+      color: #1e293b;
+      padding: 24px;
+    }
+
+    /* ---------- 返回首页方框按钮（左上角） ---------- */
+    .back-home {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(30, 41, 59, .07);
+      color: #475569;
+      text-decoration: none;
+      font-size: .88rem;
+      padding: 8px 14px;
+      transition: all .18s ease;
+    }
+    .back-home:hover {
+      background: #eef2ff;
+      color: #4f46e5;
+      border-color: #c7d2fe;
+      transform: translateY(-1px);
+    }
+
+    .wrap { max-width: 880px; margin: 26px auto 0; }
+
+    h1 { font-size: 1.9rem; letter-spacing: 1px; margin-bottom: 6px; }
+    .subtitle { color: #64748b; font-size: .92rem; margin-bottom: 26px; letter-spacing: 1px; }
+
+    /* ---------- Tab 导航 ---------- */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(30, 41, 59, .06);
+      padding: 8px;
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      font-family: inherit;
+      font-size: .92rem;
+      font-weight: 600;
+      padding: 11px 8px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all .18s ease;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { background: #f1f5f9; color: #4f46e5; }
+    .tab-btn.active {
+      background: #4f46e5;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, .28);
+    }
+
+    /* ---------- 内容区（空壳占位） ---------- */
+    .panel {
+      display: none;
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(30, 41, 59, .06);
+      min-height: 320px;
+    }
+    .panel.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: panelIn .2s ease both;
+    }
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .placeholder { color: #94a3b8; font-size: .95rem; text-align: center; padding: 40px 20px; }
+
+    /* ---------- 发起投票：权限提示 / 表单 ---------- */
+    .panel.form-panel.active { display: block; }   /* 表单面板顶对齐，不居中 */
+    .no-perm { color: #94a3b8; font-size: .95rem; line-height: 2; text-align: center; padding: 50px 24px; }
+    .no-perm a { color: #4f46e5; font-weight: 600; text-decoration: none; }
+    .no-perm a:hover { text-decoration: underline; }
+
+    .form-wrap { width: 100%; max-width: 620px; margin: 0 auto; padding: 26px 26px 30px; }
+    .field { margin-bottom: 18px; }
+    .field > label { display: block; font-size: .88rem; font-weight: 600; color: #475569; margin-bottom: 7px; }
+    .f-input {
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 13px;
+      font-family: inherit;
+      font-size: .92rem;
+      color: #1e293b;
+      background: #f8fafc;
+      transition: all .15s ease;
+    }
+    .f-input:focus {
+      outline: none;
+      border-color: #818cf8;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
+    }
+    .option-row { display: flex; gap: 8px; margin-bottom: 9px; }
+    .option-row .f-input { flex: 1; }
+    .opt-del {
+      border: 1px solid #fecaca;
+      background: #fef2f2;
+      color: #dc2626;
+      border-radius: 10px;
+      padding: 0 12px;
+      font-family: inherit;
+      font-size: .82rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s ease;
+    }
+    .opt-del:hover { background: #fee2e2; }
+    .add-opt {
+      border: 1px dashed #a5b4fc;
+      background: #f5f3ff;
+      color: #4f46e5;
+      border-radius: 10px;
+      padding: 8px 16px;
+      font-family: inherit;
+      font-size: .86rem;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .add-opt:hover { background: #eef2ff; }
+    .submit-poll {
+      width: 100%;
+      border: none;
+      background: #4f46e5;
+      color: #fff;
+      font-family: inherit;
+      font-size: .98rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      padding: 13px;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(79, 70, 229, .3);
+      transition: all .18s ease;
+    }
+    .submit-poll:hover { background: #4338ca; transform: translateY(-1px); }
+
+    /* ---------- 正在进行的投票：卡片 ---------- */
+    .panel.list-panel.active { display: block; }
+    .list-body { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 16px; }
+    .poll-card {
+      border: 1px solid #eef2f7;
+      border-radius: 13px;
+      padding: 16px 18px;
+      background: #fcfdff;
+      transition: box-shadow .18s ease, border-color .18s ease;
+    }
+    .poll-card:hover { border-color: #c7d2fe; box-shadow: 0 6px 18px rgba(79, 70, 229, .1); }
+    .poll-q { font-size: 1.02rem; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
+    .poll-meta { font-size: .78rem; color: #94a3b8; margin-bottom: 13px; display: flex; gap: 12px; flex-wrap: wrap; }
+    .poll-meta .gate { color: #4f46e5; font-weight: 600; }
+    .poll-opts { display: flex; flex-direction: column; gap: 9px; }
+    .poll-opt {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      text-align: left;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #334155;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-family: inherit;
+      font-size: .9rem;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .poll-opt:hover { border-color: #818cf8; background: #f5f3ff; }
+    .poll-opt .opt-votes { color: #94a3b8; font-size: .8rem; white-space: nowrap; }
+    /* 已投中：选项高亮 */
+    .poll-opt.chosen {
+      border-color: #4f46e5;
+      background: #eef2ff;
+      color: #4338ca;
+      font-weight: 700;
+      box-shadow: inset 3px 0 0 #4f46e5;
+    }
+    .poll-opt.chosen .opt-votes { color: #4f46e5; }
+    .poll-opt.voted { cursor: default; }
+    .poll-opt.voted:not(.chosen) { color: #94a3b8; }
+    .poll-opt.voted:not(.chosen):hover { border-color: #e2e8f0; background: #fff; }
+
+    /* ---------- 左右两列布局 + 左侧边栏 ---------- */
+    .layout { display: flex; gap: 18px; align-items: flex-start; }
+    .sidebar {
+      width: 190px;
+      flex: 0 0 190px;
+      position: sticky;
+      top: 20px;
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(30, 41, 59, .06);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .side-btn {
+      position: relative;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      font-family: inherit;
+      font-size: .88rem;
+      font-weight: 600;
+      text-align: left;
+      padding: 11px 13px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all .16s ease;
+      white-space: nowrap;
+    }
+    .side-btn:hover { background: #f1f5f9; color: #4f46e5; }
+    .side-btn.active { background: #eef2ff; color: #4f46e5; box-shadow: inset 3px 0 0 #4f46e5; }
+
+    /* 全局演示红点（绑定 demoRedDots.hasUnreadVotes） */
+    .g-red-dot {
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      width: 10px;
+      height: 10px;
+      background: red;
+      border-radius: 50%;
+      box-shadow: 0 0 5px red;
+      z-index: 2;
+    }
+    .main-col { flex: 1; min-width: 0; }
+
+    /* 我发起/我参与 视图容器（与 tabs 互斥显示） */
+    .mine-view {
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(30, 41, 59, .06);
+      padding: 20px 22px 24px;
+    }
+    .mine-view[hidden] { display: none; }
+    .mine-head { font-size: 1.02rem; font-weight: 700; color: #1e293b; margin-bottom: 15px; }
+    .mine-card {
+      border: 1px solid #eef2f7;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      background: #fcfdff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .mine-info { min-width: 0; }
+    .mine-q { font-size: .95rem; font-weight: 700; color: #1e293b; margin-bottom: 5px; }
+    .mine-sub { font-size: .78rem; color: #94a3b8; line-height: 1.7; }
+    .mine-sub b { color: #4f46e5; font-weight: 700; }
+    .mine-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+    .m-btn {
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #475569;
+      border-radius: 9px;
+      padding: 7px 12px;
+      font-family: inherit;
+      font-size: .8rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s ease;
+    }
+    .m-btn:hover { border-color: #c7d2fe; color: #4f46e5; background: #eef2ff; }
+    .m-btn.danger:hover { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
+
+    /* 查看详情弹窗 */
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, .42);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      animation: panelIn .15s ease both;
+    }
+    .modal-mask[hidden] { display: none; }
+    .modal-box {
+      width: min(460px, 92vw);
+      max-height: 82vh;
+      overflow-y: auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, .28);
+      padding: 22px 24px;
+    }
+    .modal-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+    .modal-sub { font-size: .78rem; color: #94a3b8; margin-bottom: 16px; }
+    /* 发起人详情：横向条形图（每选项不同颜色） */
+    .bar-row { margin-bottom: 13px; }
+    .bar-label { display: flex; justify-content: space-between; font-size: .86rem; color: #334155; margin-bottom: 5px; }
+    .bar-label b { color: #1e293b; }
+    .bar-label .bar-mine { color: #4f46e5; font-weight: 700; }
+    .bar-track { height: 20px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      min-width: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      transition: width .35s ease;
+    }
+
+    /* 投票卡片底部：参与人数（盲投，不显示票数） */
+    .poll-foot { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #eef2f7; font-size: .8rem; color: #94a3b8; }
+    .poll-foot b { color: #4f46e5; }
+
+    /* ---------- 已完成的投票：饼图卡片 ---------- */
+    .fin-card {
+      border: 1px solid #eef2f7;
+      border-radius: 13px;
+      padding: 18px;
+      margin-bottom: 16px;
+      background: #fcfdff;
+    }
+    .fin-q { font-size: 1.02rem; font-weight: 700; color: #1e293b; margin-bottom: 12px; }
+    .fin-body { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+    .pie {
+      width: 140px; height: 140px; flex: 0 0 140px;
+      border-radius: 50%;
+      box-shadow: 0 4px 14px rgba(30, 41, 59, .12);
+      border: 4px solid #fff;
+    }
+    .legend { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: .86rem; color: #334155; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 4px; flex: 0 0 12px; }
+    .legend-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .legend-num { color: #64748b; font-size: .8rem; white-space: nowrap; }
+    .fin-foot { margin-top: 14px; padding-top: 10px; border-top: 1px dashed #eef2f7; font-size: .78rem; color: #94a3b8; display: flex; gap: 12px; flex-wrap: wrap; }
+    .fin-foot b { color: #4f46e5; }
+
+    /* ---------- 顶栏：返回首页 + 右上角统一搜索（四页同款样式） ---------- */
+    .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .vote-search { position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; }
+    .vs-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #475569;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(30, 41, 59, .07);
+      font-family: inherit;
+      font-size: .88rem;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: all .18s ease;
+      white-space: nowrap;
+    }
+    .vs-toggle:hover { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+    .vs-ai-chip {
+      font-size: .72rem;
+      font-weight: 600;
+      color: #7c3aed;
+      background: #f5f3ff;
+      border: 1px solid #ddd6fe;
+      border-radius: 50px;
+      padding: 3px 10px;
+      white-space: nowrap;
+    }
+    .vs-panel {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      display: none;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(30, 41, 59, .16);
+      padding: 14px;
+      z-index: 9999;
+      width: 380px;
+      max-width: 86vw;
+    }
+    .vs-panel.open { display: flex; }
+    .vs-panel input {
+      flex: 1 1 210px;
+      min-width: 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-size: .88rem;
+      outline: none;
+    }
+    .vs-panel input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99, 102, 241, .14); }
+    .vs-panel select {
+      flex: 0 0 auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-family: inherit;
+      font-size: .85rem;
+      color: #475569;
+      background: #fff;
+      cursor: pointer;
+    }
+    .vs-go {
+      flex: 0 0 auto;
+      border: none;
+      background: #4f46e5;
+      color: #fff;
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-family: inherit;
+      font-size: .86rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .vs-go:hover { background: #4338ca; box-shadow: 0 4px 12px rgba(79, 70, 229, .3); }
+    .vs-hint { flex: 1 1 100%; font-size: .76rem; color: #94a3b8; }
+
+    /* ---------- 表单内置顶复选框 ---------- */
+    .pin-check { display: flex; align-items: center; gap: 8px; font-size: .88rem; color: #b91c1c; font-weight: 600; cursor: pointer; }
+    .pin-check input { width: 16px; height: 16px; accent-color: #ef4444; cursor: pointer; }
+
+    /* ---------- 📌 置顶标签 ---------- */
+    .pin-tag {
+      display: inline-flex;
+      align-items: center;
+      font-size: .68rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #f87171, #ef4444);
+      border-radius: 6px;
+      padding: 2px 7px;
+      margin-left: 8px;
+      vertical-align: middle;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, .3);
+      letter-spacing: .5px;
+    }
+
+    /* ---------- 表单内“社团相关”复选框（仅认证学生领袖可见） ---------- */
+    .club-check { display: flex; align-items: center; gap: 8px; font-size: .88rem; color: #6d28d9; font-weight: 600; cursor: pointer; }
+    .club-check input { width: 16px; height: 16px; accent-color: #7c3aed; cursor: pointer; }
+
+    /* ---------- 🏅 认证社团标签（浅紫底，与红色置顶标签区分） ---------- */
+    .club-tag {
+      display: inline-flex;
+      align-items: center;
+      font-size: .68rem;
+      font-weight: 700;
+      color: #6d28d9;
+      background: linear-gradient(135deg, #ede9fe, #e0e7ff);
+      border: 1px solid #c4b5fd;
+      border-radius: 6px;
+      padding: 1px 7px;
+      margin-left: 8px;
+      vertical-align: middle;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, .18);
+      letter-spacing: .5px;
+    }
+
+    /* ---------- 极简排序条 ---------- */
+    .sort-bar {
+      display: flex;
+      gap: 8px;
+      padding: 14px 22px 0;
+      flex-wrap: wrap;
+    }
+    .sort-btn {
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #64748b;
+      border-radius: 99px;
+      padding: 6px 14px;
+      font-family: inherit;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .sort-btn:hover { color: #4f46e5; border-color: #c7d2fe; }
+    .sort-btn.active {
+      background: #eef2ff;
+      color: #4f46e5;
+      border-color: #c7d2fe;
+      box-shadow: inset 0 0 0 1px #c7d2fe;
+    }
+
+    /* ---------- AI 搜索总结卡 + 搜索结果视图 ---------- */
+    .ai-poll-card {
+      background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+      border: 1px solid #c7d2fe;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: .88rem;
+      color: #4338ca;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+    .ai-poll-card.thinking { color: #6366f1; }
+    .search-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .search-title { font-size: 1rem; font-weight: 700; color: #1e293b; }
+    .search-clear {
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #64748b;
+      border-radius: 9px;
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: .8rem;
+      cursor: pointer;
+    }
+    .search-clear:hover { color: #4f46e5; border-color: #c7d2fe; }
+    .search-wrap { padding: 20px 22px 24px; }
+    /* 搜索结果中的静态选项（盲投安全：进行中只显示选项名） */
+    .opt-static {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: .88rem;
+      color: #334155;
+      background: #fff;
+    }
+    .modal-close {
+      width: 100%;
+      margin-top: 10px;
+      border: none;
+      background: #4f46e5;
+      color: #fff;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 600;
+      padding: 10px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .modal-close:hover { background: #4338ca; }
+
+    @media (max-width: 760px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; flex: none; position: static; flex-direction: row; flex-wrap: wrap; }
+      .side-btn { flex: 1 1 auto; text-align: center; }
+    }
+
+    @media (max-width: 600px) {
+      .tabs { flex-direction: column; }
+      h1 { font-size: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <a class="back-home" href="index.html">← 返回首页</a>
+    <!-- 右上角 AI 搜索（与信息库/论坛/圈子统一结构） -->
+    <div class="vote-search">
+      <button type="button" class="vs-toggle" id="vsToggle">🔍 搜索</button>
+      <span class="vs-ai-chip">✨ AI增强</span>
+      <div class="vs-panel" id="vsPanel">
+        <input type="text" id="vsInput" placeholder="输入投票问题或选项关键词…">
+        <select id="vsScope" title="搜索范围">
+          <option value="ongoing">正在进行的投票</option>
+          <option value="finished">已完成的投票</option>
+        </select>
+        <button type="button" class="vs-go" id="vsGo">搜索</button>
+        <div class="vs-hint">AI 会总结最热门的相关投票，进行中的投票不显示票数（盲投）。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <h1>🗳️ 校园投票——你的声音很重要</h1>
+    <p class="subtitle">发起话题、参与投票，让校园决策听见你的想法</p>
+
+  <div class="layout">
+    <!-- 左侧边栏：我的投票管理 -->
+    <aside class="sidebar">
+      <button type="button" class="side-btn" data-view="created">📊 我发起的投票</button>
+      <button type="button" class="side-btn" data-view="voted">🎯 我参与的投票<span class="g-red-dot" id="redDotVotes" hidden></span></button>
+    </aside>
+
+    <div class="main-col">
+    <div class="tabs" id="plazaTabs" role="tablist">
+      <button type="button" class="tab-btn" data-tab="create" role="tab">➕ 发起投票</button>
+      <button type="button" class="tab-btn active" data-tab="ongoing" role="tab">🗳️ 正在进行的投票</button>
+      <button type="button" class="tab-btn" data-tab="finished" role="tab">✅ 已完成的投票</button>
+    </div>
+
+    <div class="panel form-panel" data-panel="create" role="tabpanel">
+      <!-- 无权限提示（管理员 / 认证学生领袖 / Lv.4 资深及以上可见表单） -->
+      <div class="no-perm" id="createNoPerm" hidden>
+        🔒 您的当前等级或身份不足，只有管理员、🏅 认证学生领袖（社团负责人）或 Lv.4 资深及以上用户才能发起投票。<br>
+        请先前往 <a href="index.html">首页个人中心</a> 查看您的等级与经验。
+      </div>
+
+      <!-- 发起投票表单 -->
+      <form class="form-wrap" id="createForm" hidden onsubmit="return false;">
+        <div class="field">
+          <label for="pollQuestion">投票问题</label>
+          <input type="text" class="f-input" id="pollQuestion"
+                 placeholder="请输入投票问题（如：是否支持增加通宵自习室？）">
+        </div>
+        <div class="field">
+          <label for="pollDeadline">截止时间</label>
+          <input type="datetime-local" class="f-input" id="pollDeadline">
+        </div>
+        <!-- 置顶：仅管理员可见 -->
+        <div class="field" id="pinField" hidden>
+          <label class="pin-check">
+            <input type="checkbox" id="pollPinned">
+            <span>📌 置顶该投票（仅管理员可见）</span>
+          </label>
+        </div>
+        <!-- 社团相关：仅认证学生领袖可见 -->
+        <div class="field" id="clubField" hidden>
+          <label class="club-check">
+            <input type="checkbox" id="pollClub">
+            <span>🏅 标记为社团相关投票</span>
+          </label>
+        </div>
+        <div class="field">
+          <label for="pollMinLevel">可参与投票的等级区间</label>
+          <select class="f-input" id="pollMinLevel">
+            <option value="1">🌐 所有人均可参与（默认）</option>
+            <option value="2">🎯 仅限 Lv.2 萌新及以上</option>
+            <option value="4">🎯 仅限 Lv.4 资深及以上</option>
+            <option value="6">🎯 仅限 Lv.6 百事通及以上</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>投票选项（2～5 个）</label>
+          <div id="optionList"></div>
+          <button type="button" class="add-opt" id="addOption">➕ 添加选项</button>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <button type="button" class="submit-poll" id="publishPoll">发布投票</button>
+        </div>
+      </form>
+    </div>
+    <div class="panel list-panel active" data-panel="ongoing" role="tabpanel">
+      <div class="sort-bar">
+        <button type="button" class="sort-btn active" data-sort="latest">🕒 最新发布</button>
+        <button type="button" class="sort-btn" data-sort="hot">🔥 参与人数最多</button>
+      </div>
+      <div id="ongoingList"></div>
+      <div class="placeholder" id="ongoingEmpty" hidden>暂无正在进行的投票，去「➕ 发起投票」创建一个吧～</div>
+    </div>
+    <div class="panel list-panel" data-panel="finished" role="tabpanel">
+      <div class="sort-bar">
+        <button type="button" class="sort-btn active" data-sort="latest">🕒 最新发布</button>
+        <button type="button" class="sort-btn" data-sort="hot">🔥 参与人数最多</button>
+      </div>
+      <div id="finishedList"></div>
+      <div class="placeholder" id="finishedEmpty" hidden>暂无已完成的投票。</div>
+    </div>
+
+    <!-- AI 搜索结果视图（搜索时覆盖广场，不影响 Tab/侧栏状态） -->
+    <div class="panel list-panel" id="searchView" hidden>
+      <div class="search-wrap">
+        <div class="search-head">
+          <div class="search-title" id="searchTitle">搜索结果</div>
+          <button type="button" class="search-clear" id="searchClear">← 返回列表</button>
+        </div>
+        <div class="ai-poll-card thinking" id="aiPollStatus">🤖 AI正在分析投票数据...</div>
+        <div id="searchList"></div>
+        <div class="placeholder" id="searchEmpty" hidden>未找到相关投票。</div>
+      </div>
+    </div>
+
+    <!-- 侧栏视图：我发起的投票 -->
+    <div class="mine-view" id="mineCreatedView" hidden>
+      <div class="mine-head">📊 我发起的投票</div>
+      <div id="mineCreatedList"></div>
+      <div class="placeholder" id="mineCreatedEmpty" hidden>你还没有发起过投票。</div>
+    </div>
+
+    <!-- 侧栏视图：我参与的投票 -->
+    <div class="mine-view" id="mineVotedView" hidden>
+      <div class="mine-head">🎯 我参与的投票</div>
+      <div id="mineVotedList"></div>
+      <div class="placeholder" id="mineVotedEmpty" hidden>你还没有参与过任何投票。</div>
+    </div>
+    </div><!-- /.main-col -->
+  </div><!-- /.layout -->
+
+  <!-- 投票详情弹窗 -->
+  <div class="modal-mask" id="detailModal" hidden>
+    <div class="modal-box">
+      <div class="modal-title" id="detailTitle"></div>
+      <div class="modal-sub" id="detailSub"></div>
+      <div id="detailRows"></div>
+      <button type="button" class="modal-close" id="detailClose">关闭</button>
+    </div>
+  </div>
+
+  <script>
+    // ---------- 全局演示红点状态（与 index/forum/circles 共用 localStorage 键） ----------
+    const DOTS_KEY = 'demoRedDots';
+    const DOTS_DEFAULT = {
+      hasUnreadVotes: true,
+      hasUnreadForum: true,
+      hasUnreadCircles: true,
+      hasUnreadMails: true
+    };
+    function getRedDots() {
+      try {
+        const d = JSON.parse(localStorage.getItem(DOTS_KEY));
+        if (d && typeof d === 'object') return Object.assign({}, DOTS_DEFAULT, d);
+      } catch (e) { /* 损坏时重置 */ }
+      localStorage.setItem(DOTS_KEY, JSON.stringify(DOTS_DEFAULT));
+      return Object.assign({}, DOTS_DEFAULT);
+    }
+    function setRedDot(key, value) {
+      const d = getRedDots();
+      d[key] = !!value;
+      localStorage.setItem(DOTS_KEY, JSON.stringify(d));
+    }
+
+    // ---------- Tab 元素（点击监听统一由下方 enterPlaza 绑定，互斥侧栏高亮） ----------
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const panels = document.querySelectorAll('.panel');
+
+    // 供发布成功后复用：直接切到指定 Tab（无刷新）
+    function switchTab(name) {
+      document.querySelector(`.tab-btn[data-tab="${name}"]`).click();
+    }
+
+    // ---------- 发起投票 ----------
+    // 权限：管理员 / 认证学生领袖（社团负责人，不受等级限制）/ 等级 ≥ Lv.4（资深）。等级由 ai-core.js 引擎实时计算
+    function canCreatePoll() {
+      const role = localStorage.getItem('role') || 'user';
+      return role === 'admin' || role === 'certified_leader' || getLevelInfo(getExperience()).lv >= 4;
+    }
+
+    const createNoPerm = document.getElementById('createNoPerm');
+    const createForm = document.getElementById('createForm');
+    if (canCreatePoll()) {
+      createForm.hidden = false;
+    } else {
+      createNoPerm.hidden = false;
+    }
+    // 置顶复选框：仅管理员可见
+    document.getElementById('pinField').hidden =
+      (localStorage.getItem('role') || 'user') !== 'admin';
+    // 社团相关复选框：仅认证学生领袖可见（管理员走置顶逻辑，不显示此项）
+    document.getElementById('clubField').hidden =
+      (localStorage.getItem('role') || 'user') !== 'certified_leader';
+
+    // 选项动态增删：默认2个，最多5个；第3个起带删除按钮
+    const optionList = document.getElementById('optionList');
+    const addOptionBtn = document.getElementById('addOption');
+    const MIN_OPTIONS = 2, MAX_OPTIONS = 5;
+
+    function refreshOptionPlaceholders() {
+      optionList.querySelectorAll('.option-row').forEach((row, i) => {
+        row.querySelector('input').placeholder = '选项' + (i + 1);
+      });
+    }
+    function refreshAddBtn() {
+      addOptionBtn.hidden = optionList.children.length >= MAX_OPTIONS;
+    }
+    function addOptionRow() {
+      if (optionList.children.length >= MAX_OPTIONS) return;
+      const row = document.createElement('div');
+      row.className = 'option-row';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'f-input';
+      row.appendChild(input);
+      if (optionList.children.length >= MIN_OPTIONS) {   // 只有新增项（第3个起）可删
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'opt-del';
+        del.textContent = '🗑️ 删除';
+        row.appendChild(del);
+      }
+      optionList.appendChild(row);
+      refreshOptionPlaceholders();
+      refreshAddBtn();
+    }
+    addOptionRow(); addOptionRow();   // 默认 2 个
+    addOptionBtn.addEventListener('click', addOptionRow);
+    optionList.addEventListener('click', e => {          // 事件委托：删除选项
+      if (!e.target.classList.contains('opt-del')) return;
+      e.target.closest('.option-row').remove();
+      refreshOptionPlaceholders();
+      refreshAddBtn();
+    });
+
+    const questionInput = document.getElementById('pollQuestion');
+    const deadlineInput = document.getElementById('pollDeadline');
+    function resetCreateForm() {
+      questionInput.value = '';
+      deadlineInput.value = '';
+      document.getElementById('pollMinLevel').value = '1';
+      document.getElementById('pollPinned').checked = false;   // 重置置顶
+      document.getElementById('pollClub').checked = false;     // 重置社团标记
+      optionList.innerHTML = '';
+      addOptionRow(); addOptionRow();
+    }
+
+    document.getElementById('publishPoll').addEventListener('click', () => {
+      // 1) 违规警告：必须先确认，取消则什么都不做
+      if (!window.confirm('⚠️ 警告：请确保投票内容符合校园规范，严禁发布违规信息。发布后不可撤销，确定继续吗？')) return;
+
+      // 2) 校验
+      const question = questionInput.value.trim();
+      if (!question) { window.alert('请输入投票问题。'); return; }
+
+      const deadline = deadlineInput.value;
+      if (!deadline) { window.alert('请选择投票截止时间。'); return; }
+      if (new Date(deadline).getTime() <= Date.now()) {
+        window.alert('截止时间必须晚于当前时间，请重新选择。');
+        return;
+      }
+
+      const texts = [...optionList.querySelectorAll('input')]
+        .map(i => i.value.trim()).filter(Boolean);
+      if (texts.length < MIN_OPTIONS) { window.alert(`至少需要填写 ${MIN_OPTIONS} 个有效选项。`); return; }
+      if (texts.length > MAX_OPTIONS) { window.alert(`最多只能有 ${MAX_OPTIONS} 个选项。`); return; }
+
+      // 3) 组装数据并存入 localStorage 的 polls 数组
+      const polls = JSON.parse(localStorage.getItem('polls') || '[]');
+      polls.push({
+        id: 'poll_' + Date.now(),
+        question,
+        options: texts.map(text => ({ text, votes: 0 })),
+        deadline,
+        minLevel: parseInt(document.getElementById('pollMinLevel').value, 10) || 1,  // 可参与的最低等级
+        creator: localStorage.getItem('userName') || '匿名同学',
+        createdAt: new Date().toISOString(),
+        status: 'ongoing',
+        // 置顶：仅管理员勾选时存在
+        isPinned: !document.getElementById('pinField').hidden
+          && document.getElementById('pollPinned').checked,
+        // 社团相关：仅认证学生领袖勾选时为 true，不勾选则为普通投票
+        isClub: !document.getElementById('clubField').hidden
+          && document.getElementById('pollClub').checked
+      });
+      localStorage.setItem('polls', JSON.stringify(polls));
+
+      // 4) 提示 → 清空表单 → 切到“正在进行的投票”
+      window.alert('发布成功！');
+      resetCreateForm();
+      switchTab('ongoing');
+      renderOngoingPolls();
+      renderFinishedPolls();
+    });
+
+    // ---------- 正在进行的投票：渲染 + 投票等级拦截 ----------
+    const ongoingList = document.getElementById('ongoingList');
+    const ongoingEmpty = document.getElementById('ongoingEmpty');
+    const GATE_LABEL = { 1: '🌐 所有人均可参与', 2: '🎯 Lv.2 萌新及以上', 4: '🎯 Lv.4 资深及以上', 6: '🎯 Lv.6 百事通及以上' };
+
+    function getPolls() {
+      return JSON.parse(localStorage.getItem('polls') || '[]');
+    }
+    // 旧版本投票记录存在 pollVotes，首次进入迁移到 myVotes（仅迁一次）
+    if (localStorage.getItem('myVotes') === null && localStorage.getItem('pollVotes') !== null) {
+      localStorage.setItem('myVotes', localStorage.getItem('pollVotes'));
+    }
+    function getMyVotes() {
+      return JSON.parse(localStorage.getItem('myVotes') || '{}');   // { pollId: 选项下标 }
+    }
+    function fmtDeadline(s) {
+      return s ? s.replace('T', ' ') : '';
+    }
+
+    // ---------- 固定演示数据（localStorage 无 polls 时灌入；按 id 防重复；清空后刷新自动回来） ----------
+    // 公共格式化：Date 对象 → "YYYY-MM-DD HH:mm"（月/日/时/分均补零，如 2026-10-08 09:05）
+    function formatDateTime(dateObj) {
+      const p = n => String(n).padStart(2, '0');
+      return `${dateObj.getFullYear()}-${p(dateObj.getMonth() + 1)}-${p(dateObj.getDate())} ${p(dateObj.getHours())}:${p(dateObj.getMinutes())}`;
+    }
+    // 动态截止时间（offsetDays：正=未来，负=过去；清空数据后重新初始化会基于当前时间重算）
+    function demoDeadline(offsetDays) {
+      return formatDateTime(new Date(Date.now() + offsetDays * 86400000));
+    }
+    function demoCreatedAt(offsetDays) {
+      return new Date(Date.now() + offsetDays * 86400000).toISOString();
+    }
+    function buildDemoPolls() {
+      return [
+        // —— 正在进行：教务处官方置顶永远第一；其余两条学生发布，热度 156 > 12 ——
+        {
+          id: 'demo2_ongoing_course',
+          question: '关于2026年秋季学期选课系统优化的意见征集',
+          options: [
+            { text: '支持优化', votes: 420 },
+            { text: '保持现状', votes: 110 },
+            { text: '无所谓', votes: 56 }
+          ],                                          // 合计 586 人
+          deadline: demoDeadline(4),                  // 截止：当前时间 + 4 天
+          minLevel: 1,
+          creator: '重庆大学教务处',
+          createdAt: demoCreatedAt(-4),
+          status: 'ongoing',
+          isPinned: true                              // 官方置顶：任何排序下永远第一
+        },
+        {
+          id: 'demo2_ongoing_library',
+          question: '期末周图书馆是否需要延长至24:00？',
+          options: [
+            { text: '需要', votes: 120 },
+            { text: '不需要', votes: 36 }
+          ],                                          // 合计 156 人
+          deadline: demoDeadline(3),                  // 剩余 3 天
+          minLevel: 1,
+          creator: '熬夜修仙党',
+          createdAt: demoCreatedAt(-2),
+          status: 'ongoing'
+        },
+        {
+          id: 'demo2_ongoing_locker',
+          question: '是否支持在宿舍楼下增设外卖柜？',
+          options: [
+            { text: '支持', votes: 9 },
+            { text: '不支持', votes: 3 }
+          ],                                          // 合计 12 人
+          deadline: demoDeadline(6),                  // 截止：当前时间 + 6 天
+          minLevel: 1,
+          creator: '数院吴彦祖',
+          createdAt: demoCreatedAt(-0.3),             // 刚发布（最新排序非置顶组第一）
+          status: 'ongoing'
+        },
+        // —— 认证学生领袖（社团负责人）发布的社团专属投票 ——
+        {
+          id: 'demo2_ongoing_club_dance',
+          question: '关于校园街舞社招新表演时间的意见征集',
+          options: [
+            { text: '周五晚上', votes: 38 },
+            { text: '周六下午', votes: 30 },
+            { text: '周日下午', votes: 18 }
+          ],                                          // 合计 86 人
+          deadline: demoDeadline(8),                  // 截止：当前时间 + 8 天
+          minLevel: 1,
+          creator: '街舞社社长',
+          createdAt: demoCreatedAt(-1),
+          status: 'ongoing',
+          isClub: true                                // 社团专属：标题带“🏅 认证社团”标签
+        },
+        // —— 已完成 ——
+        {
+          id: 'demo2_finished_sports',
+          question: '校运动会新增项目意向',
+          options: [
+            { text: '趣味接力', votes: 180 },
+            { text: '拔河', votes: 168 },
+            { text: '电子竞技', votes: 220 }
+          ],                                          // 合计 568 人
+          deadline: demoDeadline(-3),                 // 截止：当前时间 - 3 天（稳定已结束）
+          minLevel: 1,
+          creator: '校学生会体育部',
+          createdAt: demoCreatedAt(-16),
+          status: 'finished'
+        },
+        {
+          id: 'demo2_finished_network',
+          question: '关于校园网提速方案的偏好选择',
+          options: [
+            { text: '保持现状', votes: 512 },
+            { text: '小幅提速增加费用', votes: 358 },
+            { text: '大幅提速费用较高', votes: 154 }
+          ],                                          // 合计 1024 人
+          deadline: demoDeadline(-6),                 // 截止：当前时间 - 6 天（稳定已结束）
+          minLevel: 1,
+          creator: '计院打工人',
+          createdAt: demoCreatedAt(-19),
+          status: 'finished'
+        },
+        {
+          id: 'demo2_finished_paper',
+          question: '是否同意将某门课的期末考核改为论文形式？',
+          options: [
+            { text: '同意', votes: 30 },
+            { text: '不同意', votes: 15 }
+          ],                                          // 合计 45 人
+          deadline: demoDeadline(-10),                // 截止：当前时间 - 10 天（稳定已结束）
+          minLevel: 1,
+          creator: '匿名同学',
+          createdAt: demoCreatedAt(-24),
+          status: 'finished'
+        }
+      ];
+    }
+    // 灌入演示数据：清除上一版（v1: demo_*）演示投票 → 写入新版（v2: demo2_*）；用户自建投票原样保留
+    function seedDemoPolls() {
+      const OLD_DEMO_IDS = [
+        'demo_ongoing_canteen', 'demo_ongoing_library', 'demo_ongoing_locker',
+        'demo_finished_network', 'demo_finished_sports', 'demo_finished_paper'
+      ];
+      const polls = getPolls().filter(p => !OLD_DEMO_IDS.includes(p.id));
+      let changed = false;
+      buildDemoPolls().forEach(dp => {
+        if (!polls.some(p => p.id === dp.id)) { polls.push(dp); changed = true; }
+      });
+      // 每次进入都写回：确保旧版演示数据被移除、新版齐全
+      if (changed || getPolls().some(p => OLD_DEMO_IDS.includes(p.id))) {
+        localStorage.setItem('polls', JSON.stringify(polls));
+      }
+
+      // 清理上一版“我”的演示投票记录
+      const votes = getMyVotes();
+      let votesChanged = false;
+      if (votes['demo_finished_sports'] !== undefined) {
+        delete votes['demo_finished_sports'];
+        votesChanged = true;
+      }
+      // 关键演示：补一条“我”投给“电子竞技”（下标 2）的记录；若已投过则不覆盖真实选择
+      if (votes['demo2_finished_sports'] === undefined) {
+        votes['demo2_finished_sports'] = 2;
+        votesChanged = true;
+      }
+      if (votesChanged) localStorage.setItem('myVotes', JSON.stringify(votes));
+    }
+    seedDemoPolls();
+
+    // 条形图/饼图共用配色（最多5个选项，循环取色）
+    const CHART_COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    function chartColor(i) { return CHART_COLORS[i % CHART_COLORS.length]; }
+
+    // ---------- 极简排序（全局，跨 Tab 继承，不重置） ----------
+    let currentSortType = 'latest';   // 'latest' = 最新发布 | 'hot' = 参与人数最多
+    // 置顶永远最前；同级再按当前排序方式：createdAt 倒序 / totalVotes 倒序
+    function sortPolls(list) {
+      return [...list].sort((a, b) => {
+        if (!!a.isPinned !== !!b.isPinned) return a.isPinned ? -1 : 1;
+        if (currentSortType === 'hot') {
+          const d = totalVotes(b) - totalVotes(a);
+          if (d !== 0) return d;
+        }
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      });
+    }
+    // 创建“📌 置顶”红标签（无置顶则返回 null）
+    function makePinTag() {
+      const tag = document.createElement('span');
+      tag.className = 'pin-tag';
+      tag.textContent = '📌 置顶';
+      return tag;
+    }
+    // 创建“🏅 认证社团”浅紫标签
+    function makeClubTag() {
+      const tag = document.createElement('span');
+      tag.className = 'club-tag';
+      tag.textContent = '🏅 认证社团';
+      return tag;
+    }
+    // 给标题节点写入文字 + 可选置顶/社团标签
+    function setQuestionText(node, text, pinned, club) {
+      node.textContent = text;
+      if (pinned) node.appendChild(makePinTag());
+      if (club) node.appendChild(makeClubTag());
+    }
+
+    // 投票是否已结束：显式 finished，或截止时间已过
+    function isPollFinished(poll, now = Date.now()) {
+      return poll.status === 'finished' || new Date(poll.deadline).getTime() <= now;
+    }
+    // 全局时间校验：把已过截止时间的投票自动划为已完成并持久化
+    function syncPollStatuses() {
+      const now = Date.now();
+      const polls = getPolls();
+      let changed = false;
+      polls.forEach(p => {
+        if (p.status !== 'finished' && new Date(p.deadline).getTime() <= now) {
+          p.status = 'finished';
+          changed = true;
+        }
+      });
+      if (changed) localStorage.setItem('polls', JSON.stringify(polls));
+      return polls;
+    }
+
+    function renderOngoingPolls() {
+      const polls = syncPollStatuses();
+      const list = sortPolls(polls.filter(p => !isPollFinished(p)));
+      const myVotes = getMyVotes();
+
+      ongoingList.innerHTML = '';
+      ongoingEmpty.hidden = list.length > 0;
+      if (list.length === 0) return;
+
+      const body = document.createElement('div');
+      body.className = 'list-body';
+
+      list.forEach(poll => {
+        const card = document.createElement('div');
+        card.className = 'poll-card';
+        card.dataset.id = poll.id;
+
+        const q = document.createElement('div');
+        q.className = 'poll-q';
+        setQuestionText(q, poll.question, poll.isPinned, poll.isClub);
+        card.appendChild(q);
+
+        const meta = document.createElement('div');
+        meta.className = 'poll-meta';
+        const c1 = document.createElement('span');
+        c1.textContent = `发起人：${poll.creator}`;
+        const c2 = document.createElement('span');
+        c2.textContent = `截止：${fmtDeadline(poll.deadline)}`;
+        const c3 = document.createElement('span');
+        c3.className = 'gate';
+        c3.textContent = GATE_LABEL[poll.minLevel] || `🎯 Lv.${poll.minLevel} 及以上`;
+        meta.append(c1, c2, c3);
+        card.appendChild(meta);
+
+        // 盲投：选项不显示任何票数/百分比
+        const opts = document.createElement('div');
+        opts.className = 'poll-opts';
+        const myIdx = myVotes[poll.id];
+        poll.options.forEach((opt, idx) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'poll-opt'
+            + (myIdx === idx ? ' chosen' : '')
+            + (myIdx !== undefined ? ' voted' : '');
+          btn.dataset.idx = idx;
+          const t = document.createElement('span');
+          t.textContent = opt.text;
+          btn.appendChild(t);
+          opts.appendChild(btn);
+        });
+        card.appendChild(opts);
+
+        // 仅显示参与人数（总票数 = 参与人数，每人一票）
+        const foot = document.createElement('div');
+        foot.className = 'poll-foot';
+        foot.innerHTML = `当前已有 <b>${totalVotes(poll)}</b> 人参与投票`;
+        card.appendChild(foot);
+
+        body.appendChild(card);
+      });
+      ongoingList.appendChild(body);
+    }
+    renderOngoingPolls();
+
+    // 投票点击（事件委托）：先校验时间/重复/等级，再计票；失败不高亮、不计票
+    ongoingList.addEventListener('click', e => {
+      const btn = e.target.closest('.poll-opt');
+      if (!btn) return;
+      const card = btn.closest('.poll-card');
+      const poll = getPolls().find(p => p.id === card.dataset.id);
+      if (!poll) return;
+      const idx = Number(btn.dataset.idx);
+
+      // 已投过票：直接忽略（每人每投仅限一票）
+      const myVotes = getMyVotes();
+      if (myVotes[poll.id] !== undefined) return;
+
+      // 时间校验（核心）：超过截止时间 → 警告、禁止计入、自动归入已完成
+      if (isPollFinished(poll)) {
+        window.alert('⛔ 投票已结束，无法参与投票！');
+        syncPollStatuses();
+        renderOngoingPolls();
+        if (typeof renderFinishedPolls === 'function') renderFinishedPolls();
+        return;
+      }
+
+      // 核心防刷：等级门槛拦截（等级由 ai-core.js 引擎实时计算）
+      const myLv = getLevelInfo(getExperience()).lv;
+      const minLv = poll.minLevel || 1;
+      if (myLv < minLv) {
+        window.alert(`🚫 投票失败：您的等级不足 Lv.${minLv}，无法参与此投票，请继续努力提升等级！`);
+        return;   // 不高亮、不计票
+      }
+
+      // 计票并持久化（盲投：不展示结果）
+      const polls = getPolls();
+      const target = polls.find(p => p.id === poll.id);
+      target.options[idx].votes++;
+      localStorage.setItem('polls', JSON.stringify(polls));
+      const votes = getMyVotes();
+      votes[poll.id] = idx;
+      localStorage.setItem('myVotes', JSON.stringify(votes));   // 我参与的投票记录
+
+      window.alert('投票成功！');
+      renderOngoingPolls();
+    });
+
+    // ---------- 已完成的投票：conic-gradient 饼图（纯 CSS，无外部库） ----------
+    const finishedList = document.getElementById('finishedList');
+    const finishedEmpty = document.getElementById('finishedEmpty');
+
+    function buildConicGradient(poll) {
+      const total = totalVotes(poll);
+      if (total === 0) return 'conic-gradient(#e2e8f0 0deg 360deg)';
+      let acc = 0;
+      const segs = poll.options.map((opt, i) => {
+        const start = acc / total * 360;
+        acc += opt.votes;
+        const end = acc / total * 360;
+        return `${chartColor(i)} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`;
+      });
+      return `conic-gradient(${segs.join(', ')})`;
+    }
+
+    function renderFinishedPolls() {
+      const list = sortPolls(syncPollStatuses().filter(p => isPollFinished(p)));
+      finishedList.innerHTML = '';
+      finishedEmpty.hidden = list.length > 0;
+      if (list.length === 0) return;
+
+      list.forEach(poll => {
+        const card = document.createElement('div');
+        card.className = 'fin-card';
+
+        const q = document.createElement('div');
+        q.className = 'fin-q';
+        setQuestionText(q, poll.question, poll.isPinned, poll.isClub);
+        card.appendChild(q);
+
+        const body = document.createElement('div');
+        body.className = 'fin-body';
+
+        // 饼图
+        const pie = document.createElement('div');
+        pie.className = 'pie';
+        pie.style.background = buildConicGradient(poll);
+        body.appendChild(pie);
+
+        // 图例：颜色 + 选项名 + 票数 + 百分比
+        const legend = document.createElement('div');
+        legend.className = 'legend';
+        const total = totalVotes(poll);
+        poll.options.forEach((opt, i) => {
+          const pct = total ? (opt.votes / total * 100) : 0;
+          const row = document.createElement('div');
+          row.className = 'legend-item';
+          const dot = document.createElement('span');
+          dot.className = 'legend-dot';
+          dot.style.background = chartColor(i);
+          const name = document.createElement('span');
+          name.className = 'legend-name';
+          name.textContent = opt.text;
+          const num = document.createElement('span');
+          num.className = 'legend-num';
+          num.textContent = `${opt.votes} 票 · ${pct.toFixed(1)}%`;
+          row.append(dot, name, num);
+          legend.appendChild(row);
+        });
+        body.appendChild(legend);
+        card.appendChild(body);
+
+        // 底部：发起人 / 截止时间 / 最终得票
+        const foot = document.createElement('div');
+        foot.className = 'fin-foot';
+        foot.innerHTML =
+          `<span>发起人：${poll.creator}</span>` +
+          `<span>截止：${fmtDeadline(poll.deadline)}</span>` +
+          `<span>最终得票：<b>${total}</b> 票</span>`;
+        card.appendChild(foot);
+
+        finishedList.appendChild(card);
+      });
+    }
+    renderFinishedPolls();
+
+    // ---------- 左侧边栏：我发起的 / 我参与的 ----------
+    const CURRENT_USER = localStorage.getItem('userName') || '匿名同学';
+    const sideBtns = document.querySelectorAll('.side-btn[data-view]');
+    const plazaTabs = document.getElementById('plazaTabs');
+    const mineCreatedView = document.getElementById('mineCreatedView');
+    const mineVotedView = document.getElementById('mineVotedView');
+    const mineCreatedList = document.getElementById('mineCreatedList');
+    const mineVotedList = document.getElementById('mineVotedList');
+    const mineCreatedEmpty = document.getElementById('mineCreatedEmpty');
+    const mineVotedEmpty = document.getElementById('mineVotedEmpty');
+
+    // 进入顶部广场视图：隐藏“我的”列表，恢复 Tab/面板，清除侧栏高亮
+    function enterPlaza(target) {
+      tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === target));
+      panels.forEach(p => p.classList.toggle('active', p.dataset.panel === target));
+      sideBtns.forEach(b => b.classList.remove('active'));
+      plazaTabs.hidden = false;
+      panels.forEach(p => { p.style.display = ''; });
+      mineCreatedView.hidden = true;
+      mineVotedView.hidden = true;
+      const sv1 = document.getElementById('searchView');
+      if (sv1) sv1.hidden = true;
+      if (target === 'ongoing') renderOngoingPolls();
+      if (target === 'finished') renderFinishedPolls();
+    }
+    tabBtns.forEach(btn => btn.addEventListener('click', () => enterPlaza(btn.dataset.tab)));
+
+    // 进入侧栏视图（created/voted）：隐藏广场，清除所有顶部 Tab 高亮，仅高亮当前侧栏项
+    const redDotVotes = document.getElementById('redDotVotes');
+    function syncVotesRedDot() {
+      redDotVotes.hidden = !getRedDots().hasUnreadVotes;
+    }
+    // 仅切换视图，不清除红点（用于 URL 直达等“非手动点击”场景）
+    function showView(view) {
+      mineCreatedView.hidden = view !== 'created';
+      mineVotedView.hidden = view !== 'voted';
+      const sv2 = document.getElementById('searchView');
+      if (sv2) sv2.hidden = true;
+      plazaTabs.hidden = true;
+      panels.forEach(p => { p.style.display = 'none'; });
+      sideBtns.forEach(b => b.classList.toggle('active', b.dataset.view === view));
+      tabBtns.forEach(b => b.classList.remove('active'));
+      if (view === 'created') renderMineCreated();
+      if (view === 'voted') renderMineVoted();
+    }
+    // 手动点击侧栏“我参与的投票”：切视图 + 消除红点
+    function showViewAndClear(view) {
+      showView(view);
+      if (view === 'voted' && getRedDots().hasUnreadVotes) {
+        setRedDot('hasUnreadVotes', false);
+        redDotVotes.hidden = true;
+      }
+    }
+    sideBtns.forEach(b => b.addEventListener('click', () => showViewAndClear(b.dataset.view)));
+
+    // 初始红点状态（默认演示态为亮红）
+    syncVotesRedDot();
+    // 支持从消息中心“🔗 前往”跳入：vote.html?tab=participated
+    // 注意：真正切换放在脚本末尾 enterPlaza('ongoing') 初始化之后，避免被默认 Tab 覆盖
+    const urlView = new URLSearchParams(location.search).get('tab');
+
+    function totalVotes(poll) {
+      return poll.options.reduce((s, o) => s + o.votes, 0);
+    }
+
+    // 我发起的：creator 与当前昵称一致
+    function renderMineCreated() {
+      const list = sortPolls(getPolls().filter(p => p.creator === CURRENT_USER));
+      mineCreatedEmpty.hidden = list.length > 0;
+      mineCreatedList.innerHTML = '';
+      list.forEach(poll => {
+        const card = document.createElement('div');
+        card.className = 'mine-card';
+        const info = document.createElement('div');
+        info.className = 'mine-info';
+        const q = document.createElement('div');
+        q.className = 'mine-q';
+        setQuestionText(q, poll.question, poll.isPinned, poll.isClub);
+        const sub = document.createElement('div');
+        sub.className = 'mine-sub';
+        sub.innerHTML = `截止：${fmtDeadline(poll.deadline)}　·　当前总得票：<b>${totalVotes(poll)}</b> 票　·　门槛：Lv.${poll.minLevel || 1}+`;
+        info.append(q, sub);
+
+        const actions = document.createElement('div');
+        actions.className = 'mine-actions';
+        const detailBtn = document.createElement('button');
+        detailBtn.type = 'button';
+        detailBtn.className = 'm-btn';
+        detailBtn.textContent = '📋 查看详情';
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'm-btn danger';
+        delBtn.textContent = '🗑️ 删除';
+        actions.append(detailBtn, delBtn);
+
+        detailBtn.addEventListener('click', () => openDetail(poll.id));
+        delBtn.addEventListener('click', () => {
+          if (!window.confirm(`确定删除投票「${poll.question}」吗？删除后不可恢复。`)) return;
+          const polls = getPolls().filter(p => p.id !== poll.id);
+          localStorage.setItem('polls', JSON.stringify(polls));
+          const votes = getMyVotes();
+          delete votes[poll.id];
+          localStorage.setItem('myVotes', JSON.stringify(votes));
+          renderMineCreated();      // 刷新当前列表
+          renderOngoingPolls();
+          renderFinishedPolls();
+        });
+
+        card.append(info, actions);
+        mineCreatedList.appendChild(card);
+      });
+    }
+
+    // 我参与的：myVotes 里有记录的投票
+    function renderMineVoted() {
+      const polls = getPolls();
+      const myVotes = getMyVotes();
+      const entries = Object.keys(myVotes)
+        .map(id => ({ poll: polls.find(p => p.id === id), idx: myVotes[id] }))
+        .filter(x => x.poll);   // 已被删除的投票不再展示
+      mineVotedEmpty.hidden = entries.length > 0;
+      mineVotedList.innerHTML = '';
+      entries.forEach(({ poll, idx }) => {
+        const card = document.createElement('div');
+        card.className = 'mine-card';
+        const info = document.createElement('div');
+        info.className = 'mine-info';
+        const q = document.createElement('div');
+        q.className = 'mine-q';
+        setQuestionText(q, poll.question, poll.isPinned, poll.isClub);
+        // 盲投：只记录“我投了哪个选项”，不展示结果数据
+        const sub = document.createElement('div');
+        sub.className = 'mine-sub';
+        const label = document.createElement('span');
+        label.textContent = '你投了：';
+        const choice = document.createElement('b');
+        choice.textContent = poll.options[idx]?.text || '（选项已不存在）';
+        sub.append(label, choice);
+        info.append(q, sub);
+
+        const actions = document.createElement('div');
+        actions.className = 'mine-actions';
+        const detailBtn = document.createElement('button');
+        detailBtn.type = 'button';
+        detailBtn.className = 'm-btn';
+        detailBtn.textContent = '📋 查看详情';
+        detailBtn.addEventListener('click', () => openDetail(poll.id));
+        actions.appendChild(detailBtn);
+
+        card.append(info, actions);
+        mineVotedList.appendChild(card);
+      });
+    }
+
+    // 查看详情弹窗（发起人特权）：彩色横向条形图，显示 选项名 / X票（X%）
+    const detailModal = document.getElementById('detailModal');
+    function openDetail(pollId) {
+      const poll = getPolls().find(p => p.id === pollId);
+      if (!poll) return;
+      const total = totalVotes(poll);
+      const myIdx = getMyVotes()[poll.id];
+      document.getElementById('detailTitle').textContent = poll.question;
+      document.getElementById('detailSub').textContent =
+        `发起人：${poll.creator}　·　截止：${fmtDeadline(poll.deadline)}　·　共 ${total} 票`;
+      const rows = document.getElementById('detailRows');
+      rows.innerHTML = '';
+      poll.options.forEach((opt, i) => {
+        const pct = total ? (opt.votes / total * 100) : 0;
+        const row = document.createElement('div');
+        row.className = 'bar-row';
+
+        const label = document.createElement('div');
+        label.className = 'bar-label';
+        const left = document.createElement('span');
+        left.textContent = opt.text + (myIdx === i ? '　✅ 我的选择' : '');
+        const right = document.createElement('span');
+        const b = document.createElement('b');
+        b.textContent = `${opt.votes} 票`;
+        right.append(b, `（${pct.toFixed(1)}%）`);
+        label.append(left, right);
+
+        const track = document.createElement('div');
+        track.className = 'bar-track';
+        const fill = document.createElement('div');
+        fill.className = 'bar-fill';
+        fill.style.width = pct.toFixed(1) + '%';
+        fill.style.background = chartColor(i);
+        track.appendChild(fill);
+
+        row.append(label, track);
+        rows.appendChild(row);
+      });
+      detailModal.hidden = false;
+    }
+    function closeDetail() { detailModal.hidden = true; }
+    document.getElementById('detailClose').addEventListener('click', closeDetail);
+    detailModal.addEventListener('click', e => { if (e.target === detailModal) closeDetail(); });
+
+    // ---------- 极简排序：两个列表共用全局状态 currentSortType（跨 Tab 继承） ----------
+    const sortBtns = document.querySelectorAll('.sort-btn');
+    function refreshSortBtns() {
+      sortBtns.forEach(b => b.classList.toggle('active', b.dataset.sort === currentSortType));
+    }
+    sortBtns.forEach(btn => btn.addEventListener('click', () => {
+      const t = btn.dataset.sort;
+      if (t === currentSortType) return;
+      currentSortType = t;
+      refreshSortBtns();
+      renderOngoingPolls();
+      renderFinishedPolls();
+    }));
+    refreshSortBtns();
+
+    // ---------- 右上角 AI 搜索 ----------
+    const vsToggle = document.getElementById('vsToggle');
+    const vsPanel = document.getElementById('vsPanel');
+    const vsInput = document.getElementById('vsInput');
+    const vsScope = document.getElementById('vsScope');
+    const vsGo = document.getElementById('vsGo');
+    const searchView = document.getElementById('searchView');
+    const searchList = document.getElementById('searchList');
+    const searchEmpty = document.getElementById('searchEmpty');
+    const searchTitle = document.getElementById('searchTitle');
+    const aiPollStatus = document.getElementById('aiPollStatus');
+
+    vsToggle.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = vsPanel.classList.toggle('open');
+      if (open) {
+        vsInput.focus();
+        requestAnimationFrame(() => vsPanel.classList.contains('open') && vsInput.focus());
+      }
+    });
+    // 点击搜索框外部收起
+    document.addEventListener('click', e => {
+      if (!vsPanel.classList.contains('open')) return;
+      if (vsPanel.contains(e.target) || e.target === vsToggle) return;
+      vsPanel.classList.remove('open');
+    });
+    vsPanel.addEventListener('click', e => e.stopPropagation());
+
+    // 关键词命中：问题或任一选项文本包含（大小写不敏感）
+    function pollMatches(poll, kw) {
+      if (poll.question && poll.question.toLowerCase().includes(kw)) return true;
+      return poll.options.some(o => o.text && o.text.toLowerCase().includes(kw));
+    }
+
+    // 搜索结果中的进行中卡片（盲投：仅选项名 + 参与人数，绝无票数）
+    function buildOngoingResultCard(poll) {
+      const card = document.createElement('div');
+      card.className = 'poll-card';
+      const q = document.createElement('div');
+      q.className = 'poll-q';
+      setQuestionText(q, poll.question, poll.isPinned, poll.isClub);
+      card.appendChild(q);
+
+      const meta = document.createElement('div');
+      meta.className = 'poll-meta';
+      meta.innerHTML =
+        `<span>发起人：${poll.creator}</span>` +
+        `<span>截止：${fmtDeadline(poll.deadline)}</span>` +
+        `<span class="gate">${GATE_LABEL[poll.minLevel] || '🎯 Lv.' + (poll.minLevel || 1) + ' 及以上'}</span>`;
+      card.appendChild(meta);
+
+      const opts = document.createElement('div');
+      opts.className = 'poll-opts';
+      poll.options.forEach(o => {
+        const item = document.createElement('div');
+        item.className = 'opt-static';
+        item.textContent = o.text;     // 只说明选项是什么，不显示票数
+        opts.appendChild(item);
+      });
+      card.appendChild(opts);
+
+      const foot = document.createElement('div');
+      foot.className = 'poll-foot';
+      foot.innerHTML = `当前已有 <b>${totalVotes(poll)}</b> 人参与投票`;
+      card.appendChild(foot);
+      return card;
+    }
+
+    // 搜索结果中的已完成卡片：问题 + 饼图 + 每个选项的含义/票数/占比
+    function buildFinishedResultCard(poll) {
+      const card = document.createElement('div');
+      card.className = 'fin-card';
+      const q = document.createElement('div');
+      q.className = 'fin-q';
+      setQuestionText(q, poll.question, poll.isPinned, poll.isClub);
+      card.appendChild(q);
+
+      const body = document.createElement('div');
+      body.className = 'fin-body';
+      const pie = document.createElement('div');
+      pie.className = 'pie';
+      pie.style.background = buildConicGradient(poll);
+      body.appendChild(pie);
+
+      const legend = document.createElement('div');
+      legend.className = 'legend';
+      const total = totalVotes(poll);
+      poll.options.forEach((opt, i) => {
+        const pct = total ? (opt.votes / total * 100) : 0;
+        const row = document.createElement('div');
+        row.className = 'legend-item';
+        const dot = document.createElement('span');
+        dot.className = 'legend-dot';
+        dot.style.background = chartColor(i);
+        const name = document.createElement('span');
+        name.className = 'legend-name';
+        name.textContent = opt.text;
+        const num = document.createElement('span');
+        num.className = 'legend-num';
+        num.textContent = `${opt.votes} 票 · ${pct.toFixed(1)}%`;
+        row.append(dot, name, num);
+        legend.appendChild(row);
+      });
+      body.appendChild(legend);
+      card.appendChild(body);
+
+      const foot = document.createElement('div');
+      foot.className = 'fin-foot';
+      foot.innerHTML =
+        `<span>发起人：${poll.creator}</span>` +
+        `<span>截止：${fmtDeadline(poll.deadline)}</span>` +
+        `<span>最终得票：<b>${total}</b> 票</span>`;
+      card.appendChild(foot);
+      return card;
+    }
+
+    // 进入搜索结果视图（覆盖广场与侧栏视图，但不改动它们的高亮状态）
+    function showSearchView() {
+      plazaTabs.hidden = true;
+      panels.forEach(p => { p.style.display = 'none'; });
+      mineCreatedView.hidden = true;
+      mineVotedView.hidden = true;
+      searchView.hidden = false;
+      searchView.style.display = '';
+      searchView.classList.add('active');
+    }
+    function exitSearchView() {
+      searchView.hidden = true;
+      searchView.classList.remove('active');
+      vsPanel.classList.remove('open');
+      // 恢复到当前激活的 Tab 视图
+      const activeTab = document.querySelector('.tab-btn.active') ||
+        document.querySelector('.tab-btn[data-tab=ongoing]');
+      enterPlaza(activeTab.dataset.tab);
+    }
+    document.getElementById('searchClear').addEventListener('click', exitSearchView);
+
+    async function runPollSearch() {
+      const kw = vsInput.value.trim().toLowerCase();
+      if (!kw) { window.alert('请输入搜索关键词。'); vsInput.focus(); return; }
+      const scope = vsScope.value;   // ongoing | finished
+      const scopeName = scope === 'finished' ? '已完成的投票' : '正在进行的投票';
+      vsPanel.classList.remove('open');
+
+      // 进入结果视图：先展示“AI 正在分析”
+      searchTitle.textContent = `「${vsInput.value.trim()}」的${scopeName}搜索结果`;
+      aiPollStatus.className = 'ai-poll-card thinking';
+      aiPollStatus.textContent = '🤖 AI正在分析投票数据...';
+      searchList.innerHTML = '';
+      searchEmpty.hidden = true;
+      showSearchView();
+
+      // 筛选：用户主动行为，不做置顶优先，仅按关键词匹配
+      const all = syncPollStatuses();
+      const matched = all
+        .filter(p => scope === 'finished' ? isPollFinished(p) : !isPollFinished(p))
+        .filter(p => pollMatches(p, kw));
+
+      // 统一 AI 入口（vote 板块：只传投票议题；盲投安全由 ai-core 序列化保证；失败自动兜底）
+      const summary = await askAI(vsInput.value.trim(), matched, 'vote');
+      aiPollStatus.className = 'ai-poll-card';
+      aiPollStatus.textContent = '🤖 ' + summary;
+
+      searchEmpty.hidden = matched.length > 0;
+      matched.forEach(poll => {
+        searchList.appendChild(
+          isPollFinished(poll) ? buildFinishedResultCard(poll) : buildOngoingResultCard(poll)
+        );
+      });
+    }
+    vsGo.addEventListener('click', runPollSearch);
+    vsInput.addEventListener('keydown', e => { if (e.key === 'Enter') runPollSearch(); });
+
+    // 默认：无侧栏高亮，选中顶部「🗳️ 正在进行的投票」
+    enterPlaza('ongoing');
+    // URL 指定 ?tab=participated：初始化完成后再切到“我参与的投票”（会同步消除红点）
+    if (urlView === 'participated') showView('voted');
+  </script>
+</body>
+</html>

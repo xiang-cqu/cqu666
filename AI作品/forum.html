@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>论坛 - 重庆大学校园社区</title>
+  <script src="ai-core.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+      background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 60%);
+      background-attachment: fixed;
+      color: #1e293b;
+      min-height: 100vh;
+    }
+
+    /* ---------- 返回按钮：固定在页面最左上角（与 search/vote 方框按钮统一） ---------- */
+    .back {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 900;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      width: auto;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(30, 41, 59, .07);
+      padding: 8px 14px;
+      margin-bottom: 0;
+      color: #475569;
+      text-decoration: none;
+      font-size: .88rem;
+      transition: background .18s ease, color .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    .back:hover {
+      background: #eef2ff;
+      color: #4f46e5;
+      border-color: #c7d2fe;
+      transform: translateY(-1px);
+    }
+
+    /* ---------- 主体：左右两列（Flex） ---------- */
+    .layout {
+      max-width: 1020px;
+      margin: 0 auto;
+      padding: 62px 18px 60px;   /* 顶部留白避开左上角固定返回按钮 */
+      display: flex;
+      flex-direction: row;
+      gap: 26px;
+      align-items: flex-start;
+    }
+
+    /* 左侧筛选栏：桌面端约 200px；整体 sticky 吸附，内部可纵向滚动 */
+    .sidebar {
+      flex: 0 0 200px;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 6px 18px rgba(30, 41, 59, .08);
+      padding: 16px 12px;
+      position: sticky;
+      top: 64px;               /* 吸附时避开左上角固定返回按钮 */
+      max-height: calc(100vh - 82px);
+      overflow-y: auto;
+    }
+    .filter-group + .filter-group {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid #f1f5f9;
+    }
+    .filter-group h3 {
+      font-size: .82rem;
+      color: #94a3b8;
+      letter-spacing: 2px;
+      margin: 2px 4px 10px;
+      font-weight: 600;
+    }
+    .filter-option {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      padding: 7px 10px;
+      margin-bottom: 2px;
+      font-family: inherit;
+      font-size: .9rem;
+      color: #475569;
+      cursor: pointer;
+      transition: background .15s ease, color .15s ease;
+    }
+    .filter-option:hover { background: #eef2ff; color: #4f46e5; }
+    .filter-option.active { background: #4f46e5; color: #fff; }
+    .filter-option.active:hover { background: #4338ca; color: #fff; }
+
+    /* 右侧主内容区 */
+    .main { flex: 1; min-width: 0; }
+    .main h1 { font-size: 1.7rem; letter-spacing: 2px; }
+
+    /* 窄屏：自动变回上下排列，侧栏不再吸附 */
+    @media (max-width: 720px) {
+      .layout { flex-direction: column; gap: 18px; }
+      .sidebar {
+        flex: none; width: 100%;
+        position: static; max-height: none; overflow: visible;
+      }
+    }
+
+    /* ---------- 底部分页控件 ---------- */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 6px;
+      padding: 16px 0 4px;
+    }
+    .page-info { font-size: .9rem; color: #64748b; margin-right: 4px; }
+    .page-btn {
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #4f46e5;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: .9rem;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(30, 41, 59, .06);
+      transition: background .15s ease;
+    }
+    .page-btn:hover:not(:disabled) { background: #eef2ff; }
+    .page-btn:disabled { color: #94a3b8; background: #f1f5f9; cursor: not-allowed; box-shadow: none; }
+
+    .jump-wrap { display: inline-flex; align-items: center; gap: 6px; font-size: .88rem; color: #64748b; }
+    .jump-wrap input {
+      width: 52px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 7px 8px;
+      font-family: inherit;
+      font-size: .9rem;
+      text-align: center;
+      color: #1e293b;
+    }
+    .jump-wrap input:focus {
+      outline: none;
+      border-color: #a5b4fc;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
+    }
+    /* 隐藏 number 输入框的上下箭头，保持整洁 */
+    .jump-wrap input::-webkit-outer-spin-button,
+    .jump-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+    /* ---------- 搜索区（标题行右侧；四页统一搜索样式） ---------- */
+    .main-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .search-area { position: relative; display: inline-flex; align-items: center; gap: 8px; }
+    .search-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #475569;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(30, 41, 59, .07);
+      padding: 8px 14px;
+      font-size: .88rem;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .18s ease;
+    }
+    .search-toggle:hover { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+
+    /* “圈子”按钮：与搜索按钮同款，带 NEW 小胶囊 */
+    .circle-btn {
+      position: relative;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #4f46e5;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(30, 41, 59, .07);
+      padding: 8px 16px;
+      font-size: .92rem;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s ease, border-color .15s ease, transform .15s ease;
+    }
+    .circle-btn:hover { background: #eef2ff; border-color: #c7d2fe; transform: translateY(-1px); }
+    .circle-new {
+      position: absolute;
+      top: -7px;
+      right: -10px;
+      font-size: .6rem;
+      font-weight: 700;
+      letter-spacing: .5px;
+      color: #fff;
+      background: linear-gradient(135deg, #f87171, #ef4444);
+      border-radius: 50px;
+      padding: 2px 6px;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, .4);
+      user-select: none;
+    }
+
+    .search-panel {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      width: 380px;
+      max-width: 86vw;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(30, 41, 59, .16);
+      padding: 14px;
+      gap: 10px;
+      z-index: 9999;
+    }
+    /* 允许换行：AI提示条(width:100%)独占第一行，输入框/模式/按钮在第二行，
+       否则 nowrap 下输入框会被压缩到 20px 左右导致无法输入 */
+    .search-panel.open { display: flex; flex-wrap: wrap; }
+    .search-panel input {
+      flex: 1 1 210px; min-width: 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-size: .88rem;
+      color: #1e293b;
+    }
+    .search-panel input:focus {
+      outline: none;
+      border-color: #818cf8;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, .14);
+    }
+    /* 搜索面板内的“搜索”按钮：与其他三页同款（不影响发布新帖用的 .send-btn） */
+    .search-panel .send-btn {
+      flex: 0 0 auto;
+      border: none;
+      background: #4f46e5;
+      color: #fff;
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-size: .86rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .search-panel .send-btn:hover { background: #4338ca; }
+
+    .mode-wrap { position: relative; }
+    .mode-btn {
+      flex: 0 0 auto;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #475569;
+      border-radius: 10px;
+      padding: 9px 10px;
+      font-size: .85rem;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .mode-btn:hover { background: #eef2ff; color: #4f46e5; }
+    .mode-menu {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      min-width: 132px;
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 8px;
+      box-shadow: 0 10px 24px rgba(30, 41, 59, .14);
+      overflow: hidden;
+      z-index: 40;
+    }
+    .mode-menu.open { display: block; }
+    .mode-option {
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: #fff;
+      padding: 8px 12px;
+      font-size: .86rem;
+      font-family: inherit;
+      color: #475569;
+      cursor: pointer;
+    }
+    .mode-option:hover, .mode-option.active { background: #eef2ff; color: #4f46e5; }
+
+    /* ---------- AI 智能总结卡片 / 加载中 / 空结果 ---------- */
+    #aiCard { display: none; }
+    .ai-card {
+      background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+      border: 1px solid #c7d2fe;
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 6px 18px rgba(79, 70, 229, .10);
+    }
+    .ai-card h3 { font-size: .95rem; color: #4f46e5; margin-bottom: 8px; }
+    .ai-card p { font-size: .92rem; line-height: 1.7; color: #334155; }
+    .ai-card .ai-foot { margin-top: 10px; font-size: .78rem; color: #94a3b8; }
+    .ai-card.loading h3 { color: #64748b; animation: aiPulse 1.2s ease-in-out infinite; }
+    @keyframes aiPulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+    .empty-tip { text-align: center; color: #94a3b8; padding: 40px 0; font-size: .95rem; }
+
+    /* ---------- “我的发帖”模式横幅 ---------- */
+    .mine-banner {
+      position: relative;
+      background: #eef2ff;
+      border: 1px solid #e0e7ff;
+      color: #4f46e5;
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-size: .86rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    /* 全局演示红点（绑定 demoRedDots；挂在卡片“评论”按钮左上角） */
+    .comment-btn { position: relative; }
+    .g-red-dot {
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      width: 10px;
+      height: 10px;
+      background: red;
+      border-radius: 50%;
+      box-shadow: 0 0 5px red;
+      z-index: 2;
+    }
+
+    /* ---------- 删除按钮（低调浅灰，悬停才显红） ---------- */
+    .del-btn { color: #b6c0cf; }
+    .del-btn:hover { color: #ef4444; background: #fef2f2; }
+    .child-del {
+      border: none;
+      background: transparent;
+      color: #b6c0cf;
+      font-size: .78rem;
+      font-family: inherit;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      margin-left: auto;
+    }
+    .child-del:hover { color: #ef4444; background: #fef2f2; }
+
+    /* ---------- 匿名复选框 / AI增强标签 ---------- */
+    .anon-check {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: .8rem;
+      color: #64748b;
+      cursor: pointer;
+      user-select: none;
+    }
+    .anon-check input { accent-color: #4f46e5; cursor: pointer; }
+    .ai-badge {
+      font-size: .72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 50px;
+      background: #f5f3ff;
+      color: #7c3aed;
+      border: 1px solid #ddd6fe;
+      white-space: nowrap;
+      align-self: center;
+    }
+    .ai-hint {
+      width: 100%;
+      font-size: .76rem;
+      color: #94a3b8;
+      padding: 0 2px 2px;
+    }
+
+    /* ---------- 等级晋升轻提示（右下角） ---------- */
+    .level-toast {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 300;
+      background: linear-gradient(135deg, #4f46e5, #9333ea);
+      color: #fff;
+      font-size: .9rem;
+      font-weight: 600;
+      padding: 13px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 28px rgba(79, 70, 229, .35);
+      opacity: 0;
+      transform: translateY(16px) scale(.96);
+      pointer-events: none;
+      transition: opacity .28s ease, transform .28s ease;
+    }
+    .level-toast.show { opacity: 1; transform: translateY(0) scale(1); }
+
+    .subtitle { color: #64748b; font-size: .92rem; margin: 8px 0 26px; letter-spacing: 1px; }
+
+    /* ---------- 帖子卡片 ---------- */
+    .post-card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 6px 18px rgba(30, 41, 59, .08);
+      padding: 20px 22px;
+      margin-bottom: 18px;
+    }
+
+    .post-head { display: flex; align-items: center; gap: 10px; }
+
+    .avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: #94a3b8;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: none;
+    }
+    .avatar svg { width: 24px; height: 24px; }
+    .avatar.sm { width: 28px; height: 28px; }
+    .avatar.sm svg { width: 17px; height: 17px; }
+    .avatar-img { object-fit: cover; }
+
+    .post-author { font-weight: 600; font-size: .95rem; color: #334155; }
+    .post-time { font-size: .78rem; color: #94a3b8; margin-top: 2px; }
+
+    /* ---------- 用户等级徽章（Lv.1~6，金字塔分布，高等级稀有且吸睛） ---------- */
+    .lv-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: .64rem;
+      font-weight: 700;
+      line-height: 1;
+      border-radius: 6px;
+      padding: 2px 6px;
+      margin-left: 6px;
+      vertical-align: 2px;
+      letter-spacing: .4px;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .lv-badge.lv-1 { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+    .lv-badge.lv-2 { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .lv-badge.lv-3 { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .lv-badge.lv-4 { background: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff;
+                     box-shadow: 0 0 6px rgba(168, 85, 247, .35); }
+    .lv-badge.lv-5 { background: linear-gradient(135deg, #fbbf24, #f97316); color: #fff; border: none;
+                     box-shadow: 0 0 8px rgba(249, 115, 22, .5); }
+    .lv-badge.lv-6 { background: linear-gradient(135deg, #f43f5e, #b45309 55%, #fbbf24); color: #fff; border: none;
+                     box-shadow: 0 0 12px rgba(244, 63, 94, .65); }
+
+    .post-content { font-size: 1.05rem; line-height: 1.7; margin: 14px 0 16px; }
+
+    .post-actions { display: flex; gap: 12px; }
+
+    .action-btn {
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #64748b;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: .9rem;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all .18s ease;
+    }
+    .action-btn:hover { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+    .action-btn.active { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+
+    /* 已点赞：变红 */
+    .action-btn.liked { background: #fef2f2; color: #ef4444; border-color: #fecaca; }
+    .action-btn.liked:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
+
+    .action-btn.small { padding: 3px 12px; font-size: .8rem; }
+
+    /* ---------- 回复区域（默认隐藏，平滑展开） ---------- */
+    .collapsible { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease; }
+    .collapsible.open { grid-template-rows: 1fr; }
+    .collapsible-inner { overflow: hidden; min-height: 0; }
+
+    .replies { margin-top: 14px; padding-left: 14px; border-left: 3px solid #eef2ff; }
+
+    .reply {
+      background: #f8fafc;
+      border: 1px solid #eef2f7;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-top: 10px;
+    }
+    .reply:first-child { margin-top: 4px; }
+
+    .reply-head { display: flex; align-items: center; gap: 8px; }
+    .reply-name { font-size: .88rem; font-weight: 600; color: #334155; }
+    .reply-time { font-size: .75rem; color: #94a3b8; }
+    .reply-content { font-size: .92rem; line-height: 1.65; margin: 8px 0 10px; color: #334155; }
+    .reply-actions { display: flex; gap: 10px; }
+
+    /* ---------- 追问输入区 ---------- */
+    .followup-form { margin-top: 10px; }
+    .followup-form textarea {
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: inherit;
+      font-size: .9rem;
+      color: #1e293b;
+      background: #fff;
+      resize: vertical;
+    }
+    .followup-form textarea:focus {
+      outline: none;
+      border-color: #a5b4fc;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
+    }
+    .send-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+    .send-row .anon-check { margin-top: 0; }
+    .send-btn {
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 18px;
+      font-size: .88rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .send-btn:hover { background: #4338ca; }
+
+    /* ---------- 发布新帖 / 回答楼主 ---------- */
+    .new-post-bar { margin-bottom: 22px; }
+    .new-post-btn {
+      width: 100%;
+      background: #4f46e5;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 13px 0;
+      font-size: 1rem;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 6px 14px rgba(79, 70, 229, .25);
+      transition: background .18s ease, transform .18s ease;
+    }
+    .new-post-btn:hover { background: #4338ca; transform: translateY(-1px); }
+
+    .new-post-form, .answer-form {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .new-post-form input, .answer-form input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-size: .92rem;
+      color: #1e293b;
+      background: #fff;
+    }
+    .new-post-form input:focus, .answer-form input:focus {
+      outline: none;
+      border-color: #a5b4fc;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
+    }
+
+    /* ---------- 嵌套回复（追问结果） ---------- */
+    .children { margin: 10px 0 0 12px; padding-left: 12px; border-left: 2px solid #e2e8f0; display: none; }
+    .reply.followup-open .children { display: block; }
+    .child {
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-top: 8px;
+      animation: fadeUp .25s ease;
+    }
+    .child-head { display: flex; align-items: center; gap: 7px; font-size: .82rem; font-weight: 600; color: #475569; }
+    .child-head .reply-time { margin-left: auto; }
+    .child-content { font-size: .88rem; color: #475569; margin-top: 5px; line-height: 1.6; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* ---------- @AI小助手 输入联想补全面板 ---------- */
+    /* AI 流式输出前的“思考中”三点动画（尺寸/行高与正文一致，避免布局抖动） */
+    .ai-streaming-dots { color: #8b5cf6; font-size: .86rem; }
+    .ai-streaming-dots span {
+      display: inline-block;
+      width: 4px; height: 4px;
+      margin: 0 1px;
+      border-radius: 50%;
+      background: #8b5cf6;
+      vertical-align: middle;
+      animation: aiDots 1.2s infinite ease-in-out;
+    }
+    .ai-streaming-dots span:nth-child(2) { animation-delay: .2s; }
+    .ai-streaming-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes aiDots {
+      0%, 80%, 100% { opacity: .25; transform: translateY(0); }
+      40%           { opacity: 1;   transform: translateY(-3px); }
+    }
+    .ai-mention-pop {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      background: #fff;
+      border: 1px solid #ddd6fe;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(124, 58, 237, .18);
+      padding: 4px 0;
+      min-width: 160px;
+      animation: aiMentionIn .15s ease both;
+    }
+    .ai-mention-pop.open { display: block; }
+    @keyframes aiMentionIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .ai-mention-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      font-size: .86rem;
+      color: #334155;
+      cursor: pointer;
+      transition: background .12s ease;
+    }
+    .ai-mention-item:hover { background: #f5f3ff; }
+    .ai-mention-item .mi-ico { font-size: 1.1rem; }
+
+    /* 论坛AI小助手专属头像：🤖 机器人图标 + 淡紫淡蓝圆形底，尺寸与普通小头像(28px)完全一致，避免错位 */
+    .ai-reply-avatar {
+      flex: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      line-height: 1;
+      background: linear-gradient(135deg, #ede9fe, #dbeafe);
+      border: 1px solid #ddd6fe;
+      box-shadow: 0 0 0 2px rgba(221, 214, 254, .35);
+    }
+
+    /* AI 小助手发出的评论卡片：淡紫渐变底，与普通评论区分 */
+    .reply.ai-reply {
+      background: linear-gradient(135deg, #faf5ff, #f5f3ff);
+      border: 1px solid #ddd6fe;
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+    .ai-tag {
+      display: inline-block;
+      font-size: .66rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      border-radius: 50px;
+      padding: 1px 8px;
+      margin-left: 6px;
+      vertical-align: middle;
+      letter-spacing: .5px;
+    }
+
+    /* ---------- “发布新帖”右侧：AI小助手说明入口（圆角胶囊，略小一号） ---------- */
+    .new-post-actions { display: flex; align-items: center; gap: 10px; }
+    .ai-guide-btn {
+      font-family: inherit;
+      font-size: .82rem;
+      font-weight: 700;
+      color: #6d28d9;
+      background: #f5f3ff;
+      border: 1px solid #ddd6fe;
+      border-radius: 50px;
+      padding: 8px 16px;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(124, 58, 237, .12);
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+    .ai-guide-btn:hover {
+      background: #ede9fe;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, .2);
+    }
+
+    /* ---------- AI 小助手使用说明模态框 ---------- */
+    .ai-guide-mask {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9990;
+      background: rgba(15, 23, 42, .42);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .ai-guide-mask.open { display: flex; animation: aiGuideMaskIn .18s ease both; }
+    @keyframes aiGuideMaskIn { from { opacity: 0; } to { opacity: 1; } }
+    .ai-guide-card {
+      position: relative;
+      width: 480px;
+      max-width: 92vw;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, .28);
+      padding: 26px 28px 24px;
+      animation: aiGuideCardIn .22s ease both;
+    }
+    @keyframes aiGuideCardIn {
+      from { opacity: 0; transform: translateY(14px) scale(.98); }
+      to   { opacity: 1; transform: translateY(0)    scale(1); }
+    }
+    .ai-guide-title { font-size: 1.08rem; font-weight: 800; color: #1e293b; margin-bottom: 14px; padding-right: 30px; }
+    .ai-guide-body { font-size: .9rem; color: #475569; line-height: 1.9; white-space: pre-wrap; }
+    .ai-guide-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      border: none;
+      background: #f1f5f9;
+      color: #64748b;
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      font-size: .9rem;
+      cursor: pointer;
+      transition: background .15s ease, color .15s ease;
+    }
+    .ai-guide-close:hover { background: #e2e8f0; color: #1e293b; }
+    .ai-guide-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+    .ai-guide-ok {
+      border: none;
+      font-family: inherit;
+      font-size: .88rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      border-radius: 10px;
+      padding: 10px 22px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, .28);
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .ai-guide-ok:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(124, 58, 237, .38); }
+</style>
+</head>
+<body>
+  <!-- 返回首页：固定在页面最左上角 -->
+  <a class="back" href="index.html">← 返回首页</a>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="filter-group">
+        <h3>按时间</h3>
+        <button class="filter-option active" data-sort="newest">最新发布</button>
+        <button class="filter-option" data-sort="oldest">最早发布</button>
+      </div>
+      <div class="filter-group">
+        <h3>按点赞量</h3>
+        <button class="filter-option" data-sort="likes-desc">点赞最多</button>
+        <button class="filter-option" data-sort="likes-asc">点赞最少</button>
+      </div>
+      <div class="filter-group">
+        <h3>按评论数</h3>
+        <button class="filter-option" data-sort="comments-desc">评论最多</button>
+        <button class="filter-option" data-sort="comments-asc">评论最少</button>
+      </div>
+    </aside>
+
+    <main class="main">
+    <div class="main-head">
+      <h1>💬 校园论坛</h1>
+      <div class="search-area">
+        <button type="button" class="circle-btn" id="circleBtn">🌐 圈子<span class="circle-new">NEW</span></button>
+        <button type="button" class="search-toggle" id="searchToggle">🔍 搜索</button>
+        <span class="ai-badge">✨ AI增强</span>
+        <div class="search-panel" id="searchPanel">
+          <div class="ai-hint">✨ 已启用AI语义增强，能更懂你的问题。</div>
+          <input type="text" id="searchInput" placeholder="输入关键词或作者名...">
+          <div class="mode-wrap">
+            <button type="button" class="mode-btn" id="modeBtn">🤖 模糊搜索 ▾</button>
+            <div class="mode-menu" id="modeMenu">
+              <button type="button" class="mode-option" data-mode="exact">🔍 精确搜索</button>
+              <button type="button" class="mode-option active" data-mode="fuzzy">🤖 模糊搜索</button>
+            </div>
+          </div>
+          <button type="button" class="send-btn" id="searchBtn">搜索</button>
+        </div>
+      </div>
+    </div>
+    <p class="subtitle">和重大的同学们一起聊聊天</p>
+
+    <div class="mine-banner" id="mineBanner" hidden>📍 当前仅展示：我的发帖</div>
+
+    <div class="new-post-bar">
+      <div class="new-post-actions">
+        <button class="new-post-btn" data-action="toggle-newpost">➕ 发布新帖</button>
+        <button type="button" class="ai-guide-btn" id="aiGuideBtn" title="论坛AI小助手使用说明">🤖 AI小助手</button>
+      </div>
+      <div class="collapsible" id="newPostWrap">
+        <div class="collapsible-inner">
+          <div class="new-post-form">
+            <input type="text" id="newPostTitle" maxlength="80" placeholder="输入帖子标题，比如：B区附近有什么好吃的？">
+            <button class="send-btn" data-action="submit-post">确认发布</button>
+          </div>
+          <label class="anon-check"><input type="checkbox" id="useMyName"> 😎 使用我的用户名（不勾选则以“匿名同学”发布）</label>
+        </div>
+      </div>
+    </div>
+
+    <div id="aiCard"></div>
+    <div id="postList"></div>
+
+    <div class="pagination">
+      <span class="page-info" id="pageInfo"></span>
+      <button type="button" class="page-btn" id="prevPage">⬅️ 上一页</button>
+      <span class="jump-wrap">
+        第
+        <input type="number" id="jumpPage" min="1" value="1">
+        页
+        <button type="button" class="page-btn" id="jumpBtn">跳转</button>
+      </span>
+      <button type="button" class="page-btn" id="nextPage">下一页 ➡️</button>
+    </div>
+    </main>
+  </div>
+
+  <div class="level-toast" id="levelToast"></div>
+
+  <!-- ---------- AI小助手使用说明模态框（入口在“发布新帖”右侧按钮） ---------- -->
+  <div class="ai-guide-mask" id="aiGuideMask" role="dialog" aria-modal="true" aria-labelledby="aiGuideTitle">
+    <div class="ai-guide-card">
+      <button type="button" class="ai-guide-close" id="aiGuideClose" aria-label="关闭">✕</button>
+      <div class="ai-guide-title" id="aiGuideTitle">🤖 论坛AI小助手使用说明</div>
+      <p class="ai-guide-body">同学们好！我隐藏在大家的输入框里哦~
+📌 如何召唤我：当你在帖子的“写下你的回答...”输入框中打字时，只要输入 @ 符号，下方就会自动弹出“@AI小助手”的联想选项。选择它并发送你的问题，我就会立刻阅读帖子内容与已有评论，为你提供建议。
+💡 注意：如果没有主动选中我，我可能无法察觉你的提问哦！快来试试@我吧~</p>
+      <div class="ai-guide-actions">
+        <button type="button" class="ai-guide-ok" id="aiGuideOk">好的，我知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- 当前用户与身份权限 ----------
+    // 昵称/头像与首页个人中心联动：localStorage 读取，缺省回落到默认值
+    const CURRENT_USER = localStorage.getItem('userName') || '大一新生';
+    const CURRENT_AVATAR = localStorage.getItem('userAvatar') || '';   // '' = 使用默认灰色头像
+    const userRole = localStorage.getItem('role') || 'user';
+    const isAdmin = userRole === 'admin';
+
+    // 统一的用户显示信息：实名走 localStorage 的昵称+头像，匿名走固定默认值
+    function getUserDisplayInfo(isAnonymous) {
+      if (isAnonymous) return { name: '匿名同学', avatar: '' };
+      return { name: CURRENT_USER, avatar: CURRENT_AVATAR };
+    }
+
+    // “我的发帖”模式：URL 带 filter=mine 时只展示当前用户的内容
+    const filterMine = new URLSearchParams(location.search).get('filter') === 'mine';
+
+    // ---------- 全局演示红点状态（四端共用 localStorage 键） ----------
+    const DOTS_KEY = 'demoRedDots';
+    const DOTS_DEFAULT = {
+      hasUnreadVotes: true,
+      hasUnreadForum: true,
+      hasUnreadCircles: true,
+      hasUnreadMails: true
+    };
+    function getRedDots() {
+      try {
+        const d = JSON.parse(localStorage.getItem(DOTS_KEY));
+        if (d && typeof d === 'object') return Object.assign({}, DOTS_DEFAULT, d);
+      } catch (e) { /* 损坏时重置 */ }
+      localStorage.setItem(DOTS_KEY, JSON.stringify(DOTS_DEFAULT));
+      return Object.assign({}, DOTS_DEFAULT);
+    }
+    function setRedDot(key, value) {
+      const d = getRedDots();
+      d[key] = !!value;
+      localStorage.setItem(DOTS_KEY, JSON.stringify(d));
+    }
+
+    // ---------- 预设数据（纯前端模拟） ----------
+    const posts = [
+      {
+        id: 1,
+        author: '李小满',
+        level: 2,                       // 门面担当①：Lv.2 萌新
+        time: '5分钟前',
+        content: 'A区一食堂二楼的那家饺子店怎么样？',
+        likes: 18,
+        liked: false,
+        commentCount: 2,
+        replies: [
+          {
+            id: 101, author: '饺子爱好者', time: '2分钟前',
+            content: '我觉得很好吃，推荐！酸菜猪肉馅的特别香，配上辣椒油绝了～',
+            likes: 6, liked: false, children: []
+          },
+          {
+            id: 102, author: '匿名同学', time: '刚刚',
+            content: '分量挺足，就是饭点排队久，建议 11:40 之前去。',
+            likes: 2, liked: false, children: []
+          }
+        ]
+      },
+      {
+        id: 2,
+        author: '大一新生',
+        isMine: true,                    // 唯一身份标记：属于“我”，改名/换头像/升级后渲染实时同步，不依赖昵称匹配
+        level: 1,                       // 门面担当②：Lv.1 小白（展示时 isMine 会强制绑定当前用户等级）
+        time: '1小时前',
+        content: '高数课选哪个老师好啊？',
+        likes: 25,
+        liked: false,
+        commentCount: 2,
+        replies: [
+          {
+            id: 201, author: '数学系老生', time: '50分钟前',
+            content: '选张老师，讲得细，板书也清楚，期末给分还厚道。',
+            likes: 8, liked: false, children: []
+          },
+          {
+            id: 202, author: '路过同学', time: '30分钟前',
+            content: '李老师也行，但节奏偏快，适合基础比较好的同学。',
+            likes: 1, liked: false, children: []
+          }
+        ]
+      },
+      {
+        id: 3,
+        author: '夜跑选手',
+        level: 6,                       // 门面担当③：Lv.6 百事通（满级大佬压阵）
+        time: '3小时前',
+        content: '思群广场晚上几点关门？',
+        likes: 7,
+        liked: false,
+        commentCount: 2,
+        replies: [
+          {
+            id: 301, author: '夜跑达人', time: '2小时前',
+            content: '一般晚上十点关灯关门，我上次 9:50 走的时候还开着。',
+            likes: 4, liked: false, children: []
+          },
+          {
+            id: 302, author: '热心市民', time: '1小时前',
+            content: '周末好像会晚一点，大概 22:30，供参考。',
+            likes: 0, liked: false, children: []
+          }
+        ]
+      }
+    ];
+
+    // ---------- 追加 27 条假帖子（共 30 条，用于测试分页） ----------
+    const fakeContents = [
+      'B区门口的煎饼果子还在吗？',
+      '虎溪图书馆插座紧张吗，需要抢座不？',
+      '求推荐一门好拿高分的通识选修课！',
+      '校园网最近是不是又变慢了？',
+      'A区附近有什么适合一个人吃饭的小店？',
+      '体育课选羽毛球还是乒乓球好过呀？',
+      '晚上在思群广场跑步的人多吗？',
+      '请问校医院周末可以看病吗？',
+      '宿舍里能用小功率的养生壶吗？',
+      '高数下和线代哪个更难啊？',
+      '重大的银杏叶什么时候最好看？',
+      '缙湖旁边的小黑猫有人喂吗？',
+      '大一新生要不要买辆自行车？',
+      '打印店哪家便宜，求地址！',
+      '英语四级备考用什么资料比较好？',
+      '周末想去磁器口，怎么坐车最方便？',
+      '学校的游泳馆对外开放吗？',
+      '食堂有没有清淡一点的窗口，最近胃不舒服…',
+      '计算机二级有必要考吗？',
+      'A区到虎溪的校车多久一班？',
+      '晚归会被宿管阿姨记名字吗？',
+      '求一个安静的自习室，除了图书馆！',
+      '学校附近哪里配眼镜划算？',
+      '大学物理实验报告怎么写才不被打回？',
+      '新生军训一般持续多少天呀？',
+      '校园卡丢了怎么补办，要带什么？',
+      '有没有一起早起背单词的学习搭子？'
+    ];
+    const fakeAuthors = ['热心校友', '陈同学', '追风少年', '橘子汽水', '大二学长', '匿名同学', '小林', '数学废柴', '图书馆常驻', '重大打工人'];
+    const fakeTimes = ['昨天 21:14', '昨天 18:30', '昨天 12:05', '昨天 09:42', '2天前', '2天前', '3天前', '3天前', '4天前', '5天前'];
+
+    // ---------- 等级随机分配（金字塔权重：Lv.1~3 占绝大多数，Lv.4~6 极稀有） ----------
+    // 权重：Lv.1 40% / Lv.2 30% / Lv.3 20% / Lv.4 7% / Lv.5 2% / Lv.6 1%
+    function randomLevel() {
+      const r = Math.random() * 100;
+      if (r < 40) return 1;
+      if (r < 70) return 2;
+      if (r < 90) return 3;
+      if (r < 97) return 4;
+      if (r < 99) return 5;
+      return 6;
+    }
+
+    fakeContents.forEach((content, i) => {
+      posts.push({
+        id: 4 + i,
+        author: fakeAuthors[i % fakeAuthors.length],
+        level: randomLevel(),           // 其余帖子按金字塔权重随机分配等级
+        time: fakeTimes[i % fakeTimes.length],
+        content: content,
+        likes: (i * 11 + 3) % 29,       // 0~28，制造点赞量差异
+        liked: false,
+        commentCount: i % 6,            // 0~5，制造评论数差异
+        replies: []
+      });
+    });
+
+    // 给预设回复补等级（评论/追问作者也带徽章），主贴前三条作者等级已固定
+    posts.forEach(p => {
+      (p.replies || []).forEach(r => {
+        if (r.level === undefined) r.level = randomLevel();
+        (r.children || []).forEach(c => { if (c.level === undefined) c.level = randomLevel(); });
+      });
+    });
+
+    // ---------- 第一步：补齐预设评论，让 commentCount 与 replies 数量严格一致 ----------
+    const AI_ASSIST_NAME = '🤖 论坛AI小助手';
+    const AI_PLACEHOLDER_REPLY = '建议楼主去信息库搜索一下相关关键词，或者等待热心同学来解答哦~';
+    // 自然的大学生口吻评论池（适配各类校园提问，同一帖内不重复）
+    const sampleReplyTexts = [
+      '同问，蹲一个靠谱答案～',
+      '我也想知道，有经验的同学来说说吗？',
+      '建议直接问相关部门或者学长学姐，消息最准。',
+      '可以多留意官方通知，一般都会提前发的。',
+      '看个人情况吧，适合自己的才是最好的，不用太焦虑～',
+      '码住！等一个过来人分享经验。',
+      '记得提前做好攻略，临时抱佛脚容易慌。',
+      '身边同学体验下来还不错，放平心态就好。',
+      '可以去信息库搜一下相关通知，里面写得比较全。',
+      '帮顶！我也挺关心这个问题的。',
+      '人多的时候确实要排队，建议早点去。',
+      '我上次提前在网上办好的，省了不少时间。',
+      '这种情况一般都有解决办法，先别着急～',
+      '我当时也纠结了好久，后来发现随缘就好哈哈。'
+    ];
+    const sampleReplyAuthors = ['热心校友', '大二学长', '大四学姐', '陈同学', '追风少年', '橘子汽水', '小林', '匿名同学', '图书馆常驻', '隔壁寝老王'];
+    const sampleReplyTimes = ['刚刚', '20分钟前', '1小时前', '昨天 22:10', '昨天 18:36', '昨天 12:40', '2天前', '3天前'];
+    // 确定性伪随机：保证每次刷新评论作者/时间稳定，不随刷新乱跳
+    let __replySeed = 7;
+    function __replyPick(arr) { __replySeed = (__replySeed * 9301 + 49297) % 233280; return arr[__replySeed % arr.length]; }
+
+    posts.forEach((p, pi) => {
+      if (!Array.isArray(p.replies)) p.replies = [];
+      // 1) commentCount > 实际评论数：自动补齐缺失的预设评论
+      const missing = Math.max(0, (p.commentCount || 0) - p.replies.length);
+      for (let k = 0; k < missing; k++) {
+        p.replies.push({
+          id: 10000 + pi * 10 + k,
+          author: __replyPick(sampleReplyAuthors),
+          time: __replyPick(sampleReplyTimes),
+          content: sampleReplyTexts[(pi * 5 + k) % sampleReplyTexts.length],
+          likes: __replySeed % 6,
+          liked: false,
+          children: [],
+          level: randomLevel()
+        });
+      }
+      // 2) commentCount === 0：插入一条 AI 小助手占位评论，保证展开不空白；评论数同步为 1
+      if ((p.commentCount || 0) === 0) {
+        p.replies.push({
+          id: 20000 + pi,
+          author: AI_ASSIST_NAME,
+          time: '刚刚',
+          content: AI_PLACEHOLDER_REPLY,
+          likes: 0, liked: false, children: [], isAi: true
+        });
+        p.commentCount = 1;
+      }
+    });
+
+    // ---------- 工具函数 ----------
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+      ));
+    }
+
+    function avatarHTML(small, src) {
+      if (src) {
+        return `<img class="avatar${small ? ' sm' : ''} avatar-img" src="${src}" alt="头像">`;
+      }
+      return `<span class="avatar${small ? ' sm' : ''}">
+        <svg viewBox="0 0 24 24" fill="white">
+          <circle cx="12" cy="8" r="4.2"/>
+          <path d="M4.5 20c.7-3.7 3.9-5.4 7.5-5.4s6.8 1.7 7.5 5.4z"/>
+        </svg>
+      </span>`;
+    }
+
+    function findReply(replies, id) {
+      for (const r of replies) {
+        if (r.id === id) return r;
+        const hit = findReply(r.children, id);
+        if (hit) return hit;
+      }
+      return null;
+    }
+    function locateReply(id) {
+      for (const p of posts) {
+        const hit = findReply(p.replies, id);
+        if (hit) return hit;
+      }
+      return null;
+    }
+
+    // ---------- 等级徽章渲染（复用 ai-core.js 的 LEVELS 元数据，未加载时用本地兜底表） ----------
+    const LV_NAMES = { 1: '小白', 2: '萌新', 3: '初出茅庐', 4: '资深', 5: '老油条', 6: '百事通' };
+    function renderLevelBadge(level) {
+      const lv = parseInt(level, 10);
+      if (!lv || lv < 1 || lv > 6) return '';
+      const name = (typeof LEVELS !== 'undefined' && LEVELS[lv - 1]) ? LEVELS[lv - 1].name : LV_NAMES[lv];
+      return `<span class="lv-badge lv-${lv}" title="Lv.${lv} ${name}">Lv.${lv} ${name}</span>`;
+    }
+
+    // 当前用户实时等级（以经验值唯一数据源计算，ai-core.js 未加载时用同阈值本地兜底）
+    function currentUserLevel() {
+      try {
+        if (typeof getLevelInfo === 'function' && typeof getExperience === 'function') {
+          return getLevelInfo(getExperience()).lv;
+        }
+      } catch (e) { /* 走本地兜底 */ }
+      const exp = Number(localStorage.getItem('userExp')) || 0;
+      const thresholds = [0, 100, 300, 700, 1500, 3100];
+      let lv = 1;
+      for (let i = 0; i < thresholds.length; i++) {
+        if (exp >= thresholds[i]) lv = i + 1;
+      }
+      return lv;
+    }
+
+    // 统一的“展示身份”解析：
+    // · isMine 且实名发布 → 昵称/头像/等级强制实时绑定当前用户（改名、换头像、升级立即同步）
+    // · isMine 且匿名发布 → 保持“匿名同学”外观与默认头像，不暴露身份
+    // · 其他内容 → 使用数据原始字段
+    function displayOf(item) {
+      if (item.isMine === true) {
+        if (item.anonymous === true) {
+          return { name: '匿名同学', avatar: '', level: item.level };
+        }
+        return { name: CURRENT_USER, avatar: CURRENT_AVATAR, level: currentUserLevel() };
+      }
+      return { name: item.author, avatar: item.avatar, level: item.level };
+    }
+
+    // ---------- 渲染 ----------
+    function buildChild(c) {
+      const d = displayOf(c);
+      // AI 追问：用 🤖 专属头像，不挂等级徽章
+      const avatar = c.isAi
+        ? `<span class="ai-reply-avatar" title="论坛AI小助手">🤖</span>`
+        : avatarHTML(true, d.avatar);
+      const namePart = c.isAi
+        ? `<span>${esc(d.name)}<span class="ai-tag">AI</span></span>`
+        : `<span>${esc(d.name)}${renderLevelBadge(d.level)}</span>`;
+      return `<div class="child" data-cid="${c.id}"${c.isMine ? ' data-owner="true"' : ''}${c.isAi ? ' data-ai="true"' : ''}>
+        <div class="child-head">${avatar}${namePart}<span class="reply-time">刚刚</span>
+          ${canDelete(c) ? `<button class="child-del" data-action="delete-followup" data-cid="${c.id}">🗑️ 删除</button>` : ''}
+        </div>
+        <div class="child-content">${esc(c.content)}</div>
+      </div>`;
+    }
+
+    function buildReply(r, postId) {
+      const d = displayOf(r);
+      // AI 小助手评论：显示专属 AI 标签，不挂用户等级徽章
+      const nameHTML = r.isAi
+        ? `<span class="reply-name">${esc(d.name)}<span class="ai-tag">AI</span></span>`
+        : `<span class="reply-name">${esc(d.name)}${renderLevelBadge(d.level)}</span>`;
+      // AI 小助手评论：头像替换为 🤖 机器人图标（淡紫淡蓝圆底，尺寸与普通头像一致）
+      const avatar = r.isAi
+        ? `<span class="ai-reply-avatar" title="论坛AI小助手">🤖</span>`
+        : avatarHTML(true, d.avatar);
+      const childCount = (r.children || []).length;
+      return `<div class="reply${r.isAi ? ' ai-reply' : ''}" id="reply-${r.id}"${r.isMine ? ' data-owner="true"' : ''}>
+        <div class="reply-head">
+          ${avatar}
+          ${nameHTML}
+          <span class="reply-time">${esc(r.time)}</span>
+        </div>
+        <div class="reply-content">${esc(r.content)}</div>
+        <div class="reply-actions">
+          <button class="action-btn small${r.liked ? ' liked' : ''}" data-action="like" data-type="reply" data-id="${r.id}">
+            👍 点赞 <span class="like-count">${r.likes}</span>
+          </button>
+          <button class="action-btn small" data-action="toggle-followup" data-id="${r.id}">💬 追问${childCount ? ` (${childCount})` : ''}</button>
+          ${canDelete(r) ? `<button class="action-btn small del-btn" data-action="delete-reply" data-id="${r.id}" data-post="${postId}">🗑️ 删除</button>` : ''}
+        </div>
+        <div class="collapsible followup-wrap" id="followup-${r.id}">
+          <div class="collapsible-inner">
+            <div class="followup-form">
+              <textarea rows="2" placeholder="写下你的追问，发送后会显示在这条回复下面…"></textarea>
+              <div class="send-row">
+                <label class="anon-check"><input type="checkbox" class="followup-name-check"> 😎 使用我的用户名（不勾选则以“匿名同学”发布）</label>
+                <button class="send-btn" data-action="send-followup" data-id="${r.id}" data-post="${postId}">发送</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="children">${(r.children || []).map(c => buildChild(c)).join('')}</div>
+      </div>`;
+    }
+
+    // 更新某条回复的“追问 (n)”计数标签
+    function updateFollowupCount(replyId) {
+      const btn = document.querySelector(`[data-action="toggle-followup"][data-id="${replyId}"]`);
+      if (!btn) return;
+      const reply = locateReply(replyId);
+      const n = reply ? (reply.children || []).length : 0;
+      btn.firstChild.textContent = '💬 追问' + (n ? ` (${n})` : '');
+    }
+
+    function buildPost(p) {
+      const d = displayOf(p);
+      return `<article class="post-card" data-post-id="${p.id}"${p.isMine ? ' data-owner="true"' : ''}>
+        <div class="post-head">
+          ${avatarHTML(false, d.avatar)}
+          <div>
+            <div class="post-author">${esc(d.name)}${renderLevelBadge(d.level)}</div>
+            <div class="post-time">${esc(p.time)}</div>
+          </div>
+        </div>
+        <div class="post-content">${esc(p.content)}</div>
+        <div class="post-actions">
+          <button class="action-btn${p.liked ? ' liked' : ''}" data-action="like" data-type="post" data-id="${p.id}">
+            👍 点赞 <span class="like-count">${p.likes}</span>
+          </button>
+          <button class="action-btn comment-btn" data-action="toggle-replies" data-id="${p.id}">
+            💬 评论 <span class="comment-count" id="comment-count-${p.id}">${p.commentCount}</span>${p.isMine ? '<span class="g-red-dot comment-red-dot" hidden></span>' : ''}
+          </button>
+          <button class="action-btn" data-action="toggle-answer" data-id="${p.id}">✏️ 回答</button>
+          ${canDelete(p) ? `<button class="action-btn del-btn" data-action="delete-post" data-id="${p.id}">🗑️ 删除</button>` : ''}
+        </div>
+        <div class="collapsible answer-wrap" id="answer-${p.id}">
+          <div class="collapsible-inner">
+            <div class="answer-form">
+              <input type="text" maxlength="200" placeholder="写下你的回答，直接回复楼主...">
+              <button class="send-btn" data-action="send-answer" data-id="${p.id}">发送</button>
+            </div>
+            <label class="anon-check"><input type="checkbox" class="answer-name-check"> 😎 使用我的用户名（不勾选则以“匿名同学”发布）</label>
+          </div>
+        </div>
+        <div class="collapsible replies-wrap" id="replies-${p.id}">
+          <div class="collapsible-inner">
+            <div class="replies">${p.replies.map(r => buildReply(r, p.id)).join('')}</div>
+          </div>
+        </div>
+      </article>`;
+    }
+
+    const list = document.getElementById('postList');
+
+    // ---------- @AI小助手 输入联想补全（回答输入框内输 @ 时弹出） ----------
+    const mentionPop = document.createElement('div');
+    mentionPop.className = 'ai-mention-pop';
+    mentionPop.innerHTML = '<div class="ai-mention-item"><span class="mi-ico">🤖</span><span>@AI小助手</span></div>';
+    document.body.appendChild(mentionPop);
+    let mentionTarget = null;    // 当前触发联想的 input
+    let mentionAtPos = -1;       // @ 符号在 input 中的字符索引
+
+    function hideMention() { mentionPop.classList.remove('open'); mentionTarget = null; mentionAtPos = -1; }
+
+    function showMention(input) {
+      const rect = input.getBoundingClientRect();
+      mentionPop.style.left = rect.left + 'px';
+      mentionPop.style.top = (rect.bottom + 4) + 'px';
+      mentionPop.classList.add('open');
+    }
+
+    // 事件委托：监听回答输入框的 input（输入 @ 弹出，继续输入非@则关闭）
+    list.addEventListener('input', e => {
+      const inp = e.target;
+      if (!inp.matches('.answer-form input')) { hideMention(); return; }
+      const pos = inp.selectionStart;
+      const val = inp.value;
+      // 向前找最近的 @（光标前）
+      const atIdx = val.lastIndexOf('@', pos - 1);
+      if (atIdx >= 0 && pos > atIdx) {
+        const between = val.slice(atIdx + 1, pos);
+        // @ 后面只输入了空或"AI小助手"的前缀 → 保持弹出
+        if ('AI小助手'.startsWith(between) || between === '') {
+          mentionTarget = inp;
+          mentionAtPos = atIdx;
+          showMention(inp);
+          return;
+        }
+      }
+      hideMention();
+    });
+
+    // 点击联想选项：替换 @ 为 @AI小助手（带空格）
+    // 同时监听 mousedown 和 click，确保各种浏览器/自动化工具都能触发
+    function applyMention() {
+      if (!mentionTarget) return;
+      const inp = mentionTarget;
+      const pos = inp.selectionStart;
+      const val = inp.value;
+      inp.value = val.slice(0, mentionAtPos) + '@AI小助手 ' + val.slice(pos);
+      const newPos = mentionAtPos + '@AI小助手 '.length;
+      inp.setSelectionRange(newPos, newPos);
+      inp.focus();
+      hideMention();
+    }
+    const mentionItem = mentionPop.querySelector('.ai-mention-item');
+    mentionItem.addEventListener('mousedown', e => { e.preventDefault(); applyMention(); });
+    mentionItem.addEventListener('click', e => { e.preventDefault(); applyMention(); });
+
+    // 点击其他区域关闭联想
+    document.addEventListener('click', e => {
+      if (!mentionPop.contains(e.target) && e.target !== mentionTarget) hideMention();
+    });
+
+    // ---------- 分页：每页 10 条，翻页只重新渲染右侧列表，不刷新页面 ----------
+    const PAGE_SIZE = 10;
+    let currentSort = 'newest';   // 默认“最新发布”
+    let currentPage = 1;
+    // 基础帖子池：filter=mine 时只看属于“我”的内容（以稳定的 isMine 标记为准，与昵称无关，改名不丢帖）
+    // 注意必须用函数实时计算：filter 会生成新数组，直接存死会导致发帖后新帖进不了池子
+    function getBasePool() {
+      return filterMine ? posts.filter(p => p.isMine === true) : posts;
+    }
+
+    let pool = getBasePool();     // 当前展示的帖子池：搜索时变为筛选结果，发帖时重置为基础池
+    let currentKeyword = '';      // 当前搜索关键词（用于区分空列表文案）
+
+    // “我的发帖”模式：只显示横幅；红点挂在每张我的帖子卡片的“评论”按钮上
+    if (filterMine) {
+      document.getElementById('mineBanner').hidden = false;
+    }
+    // 渲染后同步：有未读红点时，点亮所有“我的帖子”卡片上评论按钮的红点
+    function syncCommentRedDots() {
+      const unread = getRedDots().hasUnreadForum;
+      document.querySelectorAll('.comment-red-dot').forEach(d => { d.hidden = !unread; });
+    }
+
+    // 删除权限：管理员全部可见；普通用户仅限属于自己的内容（isMine 标记，与昵称/匿名无关）
+    function canDelete(item) {
+      return isAdmin || item.isMine === true;
+    }
+
+    // 在所有帖子的回复里定位一条嵌套追问
+    function locateChild(cid) {
+      for (const post of posts) {
+        for (const r of post.replies) {
+          const idx = (r.children || []).findIndex(c => c.id === cid);
+          if (idx > -1) return { post, reply: r, index: idx };
+        }
+      }
+      return null;
+    }
+
+    function getOrderedPosts() {
+      const ordered = [...pool];
+      switch (currentSort) {
+        case 'newest': break;                              // posts 数组天然为最新在前（新帖 unshift）
+        case 'oldest': ordered.reverse(); break;
+        case 'likes-desc': ordered.sort((a, b) => b.likes - a.likes); break;
+        case 'likes-asc': ordered.sort((a, b) => a.likes - b.likes); break;
+        case 'comments-desc': ordered.sort((a, b) => b.commentCount - a.commentCount); break;
+        case 'comments-asc': ordered.sort((a, b) => a.commentCount - b.commentCount); break;
+      }
+      return ordered;
+    }
+
+    function totalPages() {
+      return Math.max(1, Math.ceil(pool.length / PAGE_SIZE));
+    }
+
+    function renderPage(scrollTop) {
+      const pages = totalPages();
+      currentPage = Math.min(Math.max(1, currentPage), pages);
+
+      const ordered = getOrderedPosts();
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pagePosts = ordered.slice(start, start + PAGE_SIZE);
+      list.innerHTML = pagePosts.length
+        ? pagePosts.map(buildPost).join('')
+        : (currentKeyword
+            ? '<div class="empty-tip">没有找到相关帖子，换个词试试吧~</div>'
+            : (filterMine
+                ? '<div class="empty-tip">你还没有发布过帖子，快去发一条吧~</div>'
+                : '<div class="empty-tip">当前暂无帖子，快去发帖吧~</div>'));
+
+      document.getElementById('pageInfo').textContent = `共 ${pages} 页，当前第 ${currentPage} 页`;
+      document.getElementById('prevPage').disabled = currentPage <= 1;
+      document.getElementById('nextPage').disabled = currentPage >= pages;
+      const jump = document.getElementById('jumpPage');
+      jump.value = currentPage;
+      jump.max = pages;
+
+      if (scrollTop) document.querySelector('.main').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      syncCommentRedDots();   // 每次渲染后按 demoRedDots 恢复“我的帖子”卡片红点
+    }
+
+    function goToPage(n) {
+      currentPage = Math.min(Math.max(1, Math.floor(n) || 1), totalPages());
+      renderPage(true);   // 翻页后右侧列表自动滚到顶部
+    }
+
+    renderPage(false);
+
+    // ---------- 经验联动：升级时在页面右下角弹出轻提示 ----------
+    let levelToastTimer = null;
+    function showLevelToast(level) {
+      const el = document.getElementById('levelToast');
+      el.textContent = `🎉 恭喜！等级提升至 Lv.${level.lv} ${level.name}！`;
+      el.classList.add('show');
+      clearTimeout(levelToastTimer);
+      levelToastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+    }
+    function gainExpAndNotify(type, payload) {
+      const res = addExperience(type, payload);
+      if (res.leveledUp) showLevelToast(res.level);
+      return res;
+    }
+
+    // ---------- 交互（事件委托） ----------
+    list.addEventListener('click', async e => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+
+      switch (btn.dataset.action) {
+        // 点赞 / 取消点赞
+        case 'like': {
+          const target = btn.dataset.type === 'post'
+            ? posts.find(p => p.id === id)
+            : locateReply(id);
+          target.liked = !target.liked;
+          target.likes += target.liked ? 1 : -1;
+          btn.classList.toggle('liked', target.liked);
+          btn.querySelector('.like-count').textContent = target.likes;
+          // 爆款经验：点赞突破1000且评论数达标时，由引擎按档位补发（取消点赞不触发）
+          if (btn.dataset.type === 'post' && target.liked) {
+            gainExpAndNotify('viral', {
+              postId: id,
+              likes: target.likes,
+              comments: target.commentCount || 0
+            });
+          }
+          break;
+        }
+
+        // 展开 / 收起评论区
+        case 'toggle-replies': {
+          const wrap = document.getElementById('replies-' + id);
+          const open = wrap.classList.toggle('open');
+          btn.classList.toggle('active', open);
+          // 展开评论区即视为已读：消除该帖子红点并持久化（全局 hasUnreadForum）
+          if (open) {
+            const card = btn.closest('.post-card');
+            if (card && card.dataset.owner === 'true' && getRedDots().hasUnreadForum) {
+              setRedDot('hasUnreadForum', false);
+              syncCommentRedDots();
+            }
+          }
+          break;
+        }
+
+        // 展开 / 收起追问输入框
+        case 'toggle-followup': {
+          const replyEl = document.getElementById('reply-' + id);
+          document.getElementById('followup-' + id).classList.toggle('open');
+          // 同时展开/收起该回复下的追问列表（含 AI 追问）
+          replyEl.classList.toggle('followup-open');
+          break;
+        }
+
+        // 发送追问 → 生成一条嵌套回复
+        case 'send-followup': {
+          const wrap = document.getElementById('followup-' + id);
+          const ta = wrap.querySelector('textarea');
+          const text = ta.value.trim();
+          if (!text) return;
+
+          const nameCheck = wrap.querySelector('.followup-name-check');
+          // 勾选=使用用户名（不匿名）；不勾选=匿名
+          const useAnonymous = !(nameCheck && nameCheck.checked);
+          const { name, avatar } = getUserDisplayInfo(useAnonymous);
+          const child = { id: Date.now(), author: name, avatar, time: '刚刚', content: text, likes: 0, liked: false, children: [], isMine: true, anonymous: useAnonymous, level: useAnonymous ? randomLevel() : currentUserLevel() };
+          locateReply(id).children.push(child);
+
+          const replyNode = document.getElementById('reply-' + id);
+          // buildReply 已渲染静态 .children 容器，直接追加（不存在则兜底创建）
+          let box = replyNode.querySelector('.children');
+          if (!box) {
+            box = document.createElement('div');
+            box.className = 'children';
+            replyNode.appendChild(box);
+          }
+          box.insertAdjacentHTML('beforeend', buildChild(child));
+          // 新追问发出后自动展开该回复的追问区，并更新计数
+          replyNode.classList.add('followup-open');
+          updateFollowupCount(id);
+
+          // 同步帖子评论数
+          const postId = Number(btn.dataset.post);
+          const post = posts.find(p => p.id === postId);
+          post.commentCount++;
+          document.getElementById('comment-count-' + postId).textContent = post.commentCount;
+
+          ta.value = '';
+          if (nameCheck) nameCheck.checked = false;
+          gainExpAndNotify('reply');   // 回复他人经验（每天前3次+1）
+          break;
+        }
+
+        // 展开 / 收起“回答楼主”输入框
+        case 'toggle-answer': {
+          document.getElementById('answer-' + id).classList.toggle('open');
+          break;
+        }
+
+        // 发送回答 → 作为该帖子回复列表里的一条顶层新回复；若含 @AI小助手，则 AI 作为该回复的追问回复
+        case 'send-answer': {
+          const wrap = document.getElementById('answer-' + id);
+          const input = wrap.querySelector('input');
+          const text = input.value.trim();
+          if (!text) return;
+
+          const post = posts.find(p => p.id === id);
+          const nameCheck = wrap.querySelector('.answer-name-check');
+          // 勾选=使用用户名（不匿名）；不勾选=匿名
+          const useAnonymous = !(nameCheck && nameCheck.checked);
+          const { name, avatar } = getUserDisplayInfo(useAnonymous);
+          const reply = {
+            id: Date.now(), author: name, avatar, time: '刚刚',
+            content: text, likes: 0, liked: false, children: [],
+            isMine: true, anonymous: useAnonymous,
+            level: useAnonymous ? randomLevel() : currentUserLevel()
+          };
+          post.replies.push(reply);
+          document.querySelector('#replies-' + id + ' .replies')
+            .insertAdjacentHTML('beforeend', buildReply(reply, id));
+
+          post.commentCount++;
+          document.getElementById('comment-count-' + id).textContent = post.commentCount;
+
+          input.value = '';
+          if (nameCheck) nameCheck.checked = false;
+          wrap.classList.remove('open');
+
+          // 自动展开评论区，让刚发出的回答立即可见
+          document.getElementById('replies-' + id).classList.add('open');
+          list.querySelector(`[data-action="toggle-replies"][data-id="${id}"]`).classList.add('active');
+          gainExpAndNotify('reply');   // 回复他人经验（每天前3次+1）
+
+          // 场景B：回答里包含 @AI小助手 → AI 读取帖子上下文后作为本条回复的追问（嵌套子评论）
+          if (/@AI小助手/.test(text)) {
+            (async () => {
+              const replyId = reply.id;
+
+              const commentLines = post.replies.length
+                ? post.replies.map((r, i) => `${i + 1}. ${r.author}：${r.content}`).join('\n')
+                : '（暂无评论）';
+              const aiSystemPrompt = '你是一个热心、博学的重庆大学校园AI小助手。请根据提供的帖子标题、内容和已有的评论，以及用户在评论中对你提出的具体诉求，综合你的知识库，给出一段有建设性、温暖、客观的回复。字数控制在80字以内。';
+              const aiUserPrompt = `【帖子标题/内容】\n${post.content}\n\n【已有评论】\n${commentLines}\n\n【用户对AI的诉求】\n${text}`;
+
+              // 1) 立刻插入一条 AI 追问空卡片（🤖 头像 + AI 标签，内容区先显示思考态）
+              const child = {
+                id: Date.now() + 1,
+                author: AI_ASSIST_NAME,
+                time: '刚刚',
+                content: '',
+                likes: 0, liked: false, children: [],
+                isAi: true
+              };
+              reply.children.push(child);
+              post.commentCount++;
+              document.getElementById('comment-count-' + id).textContent = post.commentCount;
+
+              const replyNode = document.getElementById('reply-' + replyId);
+              let box = replyNode.querySelector('.children');
+              if (!box) {
+                box = document.createElement('div');
+                box.className = 'children';
+                replyNode.appendChild(box);
+              }
+              box.insertAdjacentHTML('beforeend', buildChild(child));
+              replyNode.classList.add('followup-open');
+              updateFollowupCount(replyId);
+
+              const childNode = box.querySelector(`[data-cid="${child.id}"]`);
+              const contentEl = childNode.querySelector('.child-content');
+              contentEl.innerHTML = '<span class="ai-streaming-dots">AI正在思考<span></span><span></span><span></span></span>';
+
+              // 2) 流式请求：首个增量到达时清空思考态，逐字追加；失败用兜底文案
+              let aiText = '';
+              let started = false;
+              const typer = createTextTyper(piece => {
+                if (!started) { started = true; contentEl.textContent = ''; }
+                aiText += piece;
+                contentEl.textContent = aiText;
+              }, 26, 2);
+              try {
+                if (typeof callAIAPIStream !== 'function') throw new Error('callAIAPIStream 未就绪');
+                await callAIAPIStream(
+                  [
+                    { role: 'system', content: aiSystemPrompt },
+                    { role: 'user', content: aiUserPrompt }
+                  ],
+                  delta => typer.feed(delta)
+                );
+              } catch (err) {
+                console.warn('[forum] @AI小助手追问失败，使用兜底文案：', err);
+                typer.feed('AI小助手暂时无法回答，建议去信息库搜索相关通知，或者去圈子广场问问学长学姐哦~');
+              }
+              await typer.finish();
+
+              // 3) 同步数据层（翻页重渲顺序不乱），DOM 以完整文本兜底一次
+              child.content = aiText || 'AI小助手暂时无法回答，建议去信息库搜索相关通知，或者去圈子广场问问学长学姐哦~';
+              contentEl.textContent = child.content;
+            })();
+          }
+          break;
+        }
+
+        // 删除主贴：confirm 确认后从数据与页面同时移除，并重算分页（自动从下一页补一条）
+        case 'delete-post': {
+          if (!window.confirm('确定要删除这条内容吗？')) break;
+          const pi = posts.findIndex(p => p.id === id);
+          if (pi === -1) break;
+          posts.splice(pi, 1);
+          if (pool !== posts) {
+            const qi = pool.findIndex(p => p.id === id);
+            if (qi > -1) pool.splice(qi, 1);
+          }
+          renderPage(false);
+          break;
+        }
+
+        // 删除回复：连同它的追问一起移除，并同步评论数
+        case 'delete-reply': {
+          if (!window.confirm('确定要删除这条内容吗？')) break;
+          const postId = Number(btn.dataset.post);
+          const post = posts.find(p => p.id === postId);
+          const idx = post ? post.replies.findIndex(r => r.id === id) : -1;
+          if (idx === -1) break;
+          const removed = post.replies.splice(idx, 1)[0];
+          post.commentCount -= 1 + (removed.children || []).length;
+          document.getElementById('comment-count-' + postId).textContent = post.commentCount;
+          const node = document.getElementById('reply-' + id);
+          if (node) node.remove();
+          break;
+        }
+
+        // 删除追问（嵌套回复）：只移除该条，并同步评论数
+        case 'delete-followup': {
+          if (!window.confirm('确定要删除这条内容吗？')) break;
+          const cid = Number(btn.dataset.cid);
+          const found = locateChild(cid);
+          if (!found) break;
+          found.reply.children.splice(found.index, 1);
+          found.post.commentCount--;
+          document.getElementById('comment-count-' + found.post.id).textContent = found.post.commentCount;
+          const node = btn.closest('.child');
+          if (node) node.remove();
+          break;
+        }
+      }
+    });
+
+    // ---------- 发布新帖（入口在帖子列表之外，单独委托） ----------
+    document.addEventListener('click', e => {
+      const btn = e.target.closest('[data-action="toggle-newpost"], [data-action="submit-post"]');
+      if (!btn) return;
+      const wrap = document.getElementById('newPostWrap');
+
+      if (btn.dataset.action === 'toggle-newpost') {
+        const open = wrap.classList.toggle('open');
+        if (open) document.getElementById('newPostTitle').focus();
+        return;
+      }
+
+      const input = document.getElementById('newPostTitle');
+      const text = input.value.trim();
+      if (!text) return;
+      const nameCheck = document.getElementById('useMyName');
+      // 勾选=使用用户名（不匿名）；不勾选=匿名
+      const useAnonymous = !nameCheck.checked;
+      const { name, avatar } = getUserDisplayInfo(useAnonymous);
+      const post = {
+        id: Date.now(), author: name, avatar, time: '刚刚',
+        content: text, likes: 0, liked: false,
+        commentCount: 0, replies: [],
+        isMine: true, anonymous: useAnonymous,
+        level: useAnonymous ? randomLevel() : currentUserLevel()
+      };
+      posts.unshift(post);
+      // 发帖时重置搜索状态：回到基础帖子池（mine 模式下新帖本来就是我发的，自然在池内）
+      pool = getBasePool();
+      currentKeyword = '';
+      hideAiCard();
+      searchInput.value = '';
+      // 新帖默认按“最新发布”排在第一页第一位，并刷新分页按钮状态（如 10→11 时下一页变可点）
+      currentSort = 'newest';
+      document.querySelectorAll('.filter-option').forEach(o =>
+        o.classList.toggle('active', o.dataset.sort === 'newest'));
+      goToPage(1);
+      input.value = '';
+      nameCheck.checked = false;
+      wrap.classList.remove('open');
+    });
+
+    // 追问输入框：Enter 发送，Shift+Enter 换行
+    list.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey && e.target.matches('.followup-form textarea')) {
+        e.preventDefault();
+        const replyId = e.target.closest('.reply').id.replace('reply-', '');
+        list.querySelector(`[data-action="send-followup"][data-id="${replyId}"]`).click();
+      }
+    });
+
+    // 发布新帖 / 回答楼主：Enter 发送
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' || e.shiftKey) return;
+      if (e.target.id === 'newPostTitle') {
+        e.preventDefault();
+        document.querySelector('[data-action="submit-post"]').click();
+      } else if (e.target.matches('.answer-form input')) {
+        e.preventDefault();
+        const id = e.target.closest('.answer-wrap').id.replace('answer-', '');
+        list.querySelector(`[data-action="send-answer"][data-id="${id}"]`).click();
+      }
+    });
+
+    // ---------- 左侧筛选栏：切换排序后回到第 1 页并重新渲染列表 ----------
+    const sidebar = document.querySelector('.sidebar');
+    sidebar.addEventListener('click', e => {
+      const opt = e.target.closest('.filter-option');
+      if (!opt) return;
+
+      currentSort = opt.dataset.sort;
+      sidebar.querySelectorAll('.filter-option').forEach(o => o.classList.toggle('active', o === opt));
+      currentPage = 1;
+      renderPage(false);
+    });
+
+    // ---------- 分页控件（按钮均为 type=button，回车已 preventDefault，绝不提交刷新） ----------
+    document.getElementById('prevPage').addEventListener('click', () => goToPage(currentPage - 1));
+    document.getElementById('nextPage').addEventListener('click', () => goToPage(currentPage + 1));
+
+    function jumpToInputPage() {
+      const jump = document.getElementById('jumpPage');
+      const n = parseInt(jump.value, 10);
+      if (Number.isNaN(n)) { jump.value = currentPage; return; }
+      goToPage(n);
+    }
+    document.getElementById('jumpBtn').addEventListener('click', jumpToInputPage);
+    document.getElementById('jumpPage').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); jumpToInputPage(); }
+    });
+
+    // ---------- 搜索（接入 ai-core.js：exactSearch / fuzzyMatchPosts / askAI） ----------
+    const searchToggle = document.getElementById('searchToggle');
+    const searchPanel = document.getElementById('searchPanel');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const modeBtn = document.getElementById('modeBtn');
+    const modeMenu = document.getElementById('modeMenu');
+    const aiCard = document.getElementById('aiCard');
+    let searchMode = 'fuzzy';   // 默认模糊搜索
+
+    function showAiLoading() {
+      aiCard.style.display = 'block';
+      aiCard.innerHTML = '<div class="ai-card loading"><h3>🤖 AI正在阅读论坛帖子并总结...</h3></div>';
+    }
+    function showAiCard(text, count) {
+      aiCard.style.display = 'block';
+      aiCard.innerHTML = `<div class="ai-card">
+        <h3>🤖 AI智能总结</h3>
+        <p>${esc(text)}</p>
+        <div class="ai-foot">${count > 0 ? `基于论坛 ${count} 篇相关帖子的分析` : '本板块暂无匹配数据'}</div>
+      </div>`;
+    }
+    function hideAiCard() {
+      aiCard.style.display = 'none';
+      aiCard.innerHTML = '';
+    }
+
+    // ---------- “圈子”按钮：跳转到 circles.html ----------
+    const circleBtn = document.getElementById('circleBtn');
+    circleBtn.addEventListener('click', () => {
+      window.location.href = 'circles.html';
+    });
+
+    // 展开/收起搜索小框
+    searchToggle.addEventListener('click', () => {
+      const open = searchPanel.classList.toggle('open');
+      if (open) {
+        // 展开瞬间聚焦：同步一次 + 下一帧兜底一次，保证光标立刻在输入框内
+        searchInput.focus();
+        requestAnimationFrame(() => { if (searchPanel.classList.contains('open')) searchInput.focus(); });
+      }
+    });
+
+    // 点击页面其他空白处，自动收起搜索小框和下拉菜单
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#searchPanel') && !e.target.closest('#searchToggle')) {
+        searchPanel.classList.remove('open');
+      }
+      if (!e.target.closest('#modeBtn')) modeMenu.classList.remove('open');
+    });
+
+    // 搜索模式下拉
+    modeBtn.addEventListener('click', () => modeMenu.classList.toggle('open'));
+    modeMenu.addEventListener('click', e => {
+      const opt = e.target.closest('.mode-option');
+      if (!opt) return;
+      searchMode = opt.dataset.mode;
+      modeBtn.textContent = opt.textContent.trim() + ' ▾';
+      modeMenu.querySelectorAll('.mode-option').forEach(o => o.classList.toggle('active', o === opt));
+      modeMenu.classList.remove('open');
+    });
+
+    // 执行搜索
+    async function doSearch() {
+      const kw = searchInput.value.trim();
+      currentPage = 1;
+      currentKeyword = kw;
+
+      if (!kw) {           // 空关键词：恢复基础帖子池（mine 模式下仍是“我的发帖”）
+        pool = getBasePool();
+        hideAiCard();
+        renderPage(false);
+        return;
+      }
+
+      if (searchMode === 'exact') {
+        // 精确搜索：直接渲染匹配结果，不显示AI卡片
+        pool = exactSearch(getBasePool(), kw);
+        hideAiCard();
+        renderPage(false);
+        return;
+      }
+
+      // 模糊搜索：先本地筛选，再让AI总结（forum 板块：上下文只传论坛帖子）
+      const matched = fuzzyMatchPosts(getBasePool(), kw);
+      pool = matched;
+      showAiLoading();
+      renderPage(false);
+
+      // 流式总结：骨架卡片先就位，首个增量到达时替换 loading，内容逐字输出
+      let streamEl = null;
+      let streamed = '';
+      function ensureStreamCard() {
+        if (streamEl) return;
+        aiCard.style.display = 'block';
+        aiCard.innerHTML = `<div class="ai-card">
+          <h3>🤖 AI智能总结</h3>
+          <p class="ai-stream-text"></p>
+          <div class="ai-foot">${matched.length > 0 ? `基于论坛 ${matched.length} 篇相关帖子的分析` : '本板块暂无匹配数据'}</div>
+        </div>`;
+        streamEl = aiCard.querySelector('.ai-stream-text');
+      }
+      const typer = createTextTyper(piece => {
+        ensureStreamCard();
+        streamed += piece;
+        streamEl.textContent = streamed;
+      }, 26, 2);
+      const answer = await askAIStream(kw, matched, 'forum', delta => typer.feed(delta));
+      await typer.finish();
+      ensureStreamCard();   // 极端情况下首个回调前就结束也要保证卡片存在
+      streamEl.textContent = answer;
+    }
+
+    searchBtn.addEventListener('click', doSearch);
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+    });
+
+    // ---------- 论坛AI小助手使用说明弹窗（入口在“发布新帖”右侧） ----------
+    const aiGuideMask = document.getElementById('aiGuideMask');
+    const aiGuideClose = document.getElementById('aiGuideClose');
+    const aiGuideOk = document.getElementById('aiGuideOk');
+    const aiGuideBtn = document.getElementById('aiGuideBtn');
+
+    function openAiGuide() { aiGuideMask.classList.add('open'); }
+    function closeAiGuide() { aiGuideMask.classList.remove('open'); }
+
+    aiGuideBtn.addEventListener('click', openAiGuide);
+    aiGuideClose.addEventListener('click', closeAiGuide);
+    aiGuideOk.addEventListener('click', closeAiGuide);
+    aiGuideMask.addEventListener('click', e => { if (e.target === aiGuideMask) closeAiGuide(); });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && aiGuideMask.classList.contains('open')) closeAiGuide();
+    });
+  </script>
+</body>
+</html>

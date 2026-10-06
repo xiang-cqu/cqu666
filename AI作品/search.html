@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>官方信息库 - 重庆大学校园社区</title>
+  <script src="ai-core.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 60%);
+      color: #1e293b;
+      padding: 24px;
+    }
+
+    /* ---------- 顶栏：左返回 / 右 AI 搜索 ---------- */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      position: relative;
+    }
+    .back-home {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(30, 41, 59, .07);
+      color: #475569;
+      text-decoration: none;
+      font-size: .88rem;
+      padding: 8px 14px;
+      transition: all .18s ease;
+    }
+    .back-home:hover {
+      background: #eef2ff;
+      color: #4f46e5;
+      border-color: #c7d2fe;
+      transform: translateY(-1px);
+    }
+
+    /* 右上角搜索组件 */
+    .is-widget { position: relative; display: flex; align-items: center; gap: 8px; }
+    .is-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(30, 41, 59, .07);
+      color: #475569;
+      font-family: inherit;
+      font-size: .88rem;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: all .18s ease;
+    }
+    .is-btn:hover { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+    .ai-chip {
+      font-size: .72rem;
+      font-weight: 600;
+      color: #7c3aed;
+      background: #f5f3ff;
+      border: 1px solid #ddd6fe;
+      border-radius: 50px;
+      padding: 3px 10px;
+      white-space: nowrap;
+    }
+    /* 搜索浮层（默认隐藏，点外部收起） */
+    .is-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 9999;
+      width: 380px;
+      max-width: 86vw;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: 0 12px 30px rgba(30, 41, 59, .16);
+      padding: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .is-panel.open { display: flex; }
+    .is-panel input {
+      flex: 1 1 210px;
+      min-width: 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-family: inherit;
+      font-size: .88rem;
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .is-panel input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99, 102, 241, .14); }
+    .is-go {
+      flex: 0 0 auto;
+      border: none;
+      background: #4f46e5;
+      color: #fff;
+      font-family: inherit;
+      font-size: .86rem;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 9px 16px;
+      cursor: pointer;
+      transition: background .15s ease, box-shadow .15s ease;
+    }
+    .is-go:hover { background: #4338ca; box-shadow: 0 4px 12px rgba(79, 70, 229, .3); }
+
+    .wrap { max-width: 880px; margin: 26px auto 0; }
+
+    /* ---------- 官方标识区（权威感：居中、深色、加粗、细分隔线） ---------- */
+    .brand {
+      text-align: center;
+      padding: 8px 0 22px;
+      border-bottom: 1px solid #dbe3ef;
+      margin-bottom: 24px;
+    }
+    .brand-title {
+      font-size: 1.7rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #0f2557;
+    }
+    .brand-sub {
+      margin-top: 8px;
+      font-size: .82rem;
+      color: #94a3b8;
+      letter-spacing: 3px;
+    }
+    /* 醒目标语：淡蓝灰、居中、轻微上浮渐显（不依赖 opacity，动画禁用也可见） */
+    .brand-slogan {
+      margin-top: 12px;
+      font-size: .95rem;
+      font-weight: 600;
+      color: #4f5fa0;
+      letter-spacing: 1px;
+      animation: sloganIn .9s ease .2s backwards;
+    }
+    @keyframes sloganIn {
+      from { transform: translateY(8px); filter: blur(4px); }
+      to   { transform: translateY(0);    filter: blur(0); }
+    }
+
+    /* ---------- 三栏筛选导航（等宽、居中、互斥高亮） ---------- */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      max-width: 620px;
+      margin: 0 auto 20px;
+    }
+    .tab-btn {
+      flex: 1;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #64748b;
+      font-family: inherit;
+      font-size: .92rem;
+      font-weight: 600;
+      padding: 12px 8px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all .18s ease;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: #4f46e5; border-color: #c7d2fe; background: #f8faff; }
+    .tab-btn.active {
+      background: #4f46e5;
+      border-color: #4f46e5;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, .28);
+    }
+
+    /* 搜索态：隐藏 Tab 与常规面板，只展示搜索结果视图 */
+    body.searching .tabs,
+    body.searching .panel { display: none !important; }
+
+    /* ---------- 内容区 ---------- */
+    .panel {
+      display: none;
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(30, 41, 59, .06);
+      min-height: 320px;
+    }
+    /* 尚无数据的面板（占位）居中 */
+    .panel.placeholder-panel {
+      align-items: center;
+      justify-content: center;
+    }
+    .panel.placeholder-panel.active { display: flex; }
+    /* 列表型面板纵向排列 */
+    .panel.list-panel.active { display: block; }
+    /* 反馈表单面板 */
+    .panel.feedback-panel.active { display: block; }
+    .panel.active { animation: panelIn .2s ease both; }
+    @keyframes panelIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .placeholder { color: #94a3b8; font-size: .95rem; letter-spacing: 1px; }
+
+    /* ---------- 意见反馈表单 ---------- */
+    .feedback-panel { padding: 26px 24px; }
+    .feedback-tip { font-size: .82rem; color: #94a3b8; margin-bottom: 12px; }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 150px;
+      resize: vertical;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 13px 15px;
+      font-family: inherit;
+      font-size: .92rem;
+      line-height: 1.7;
+      color: #1e293b;
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .feedback-textarea:focus {
+      border-color: #818cf8;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, .14);
+    }
+    .feedback-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+    .feedback-submit {
+      border: none;
+      background: #4f46e5;
+      color: #fff;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 10px 22px;
+      cursor: pointer;
+      transition: background .15s ease, box-shadow .15s ease;
+    }
+    .feedback-submit:hover { background: #4338ca; box-shadow: 0 4px 12px rgba(79, 70, 229, .3); }
+
+    /* ---------- 通知公告卡片 ---------- */
+    .notice-list { padding: 20px 0 26px; display: flex; flex-direction: column; gap: 16px; }
+    .notice-card {
+      width: 80%;
+      max-width: 680px;
+      margin: 0 auto;
+      border: 1px solid #eef2f7;
+      border-radius: 13px;
+      background: #fcfdff;
+      padding: 18px 22px;
+      cursor: pointer;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    .notice-card:hover { border-color: #c7d2fe; box-shadow: 0 6px 18px rgba(79, 70, 229, .1); }
+    .notice-title { font-size: 1.08rem; font-weight: 700; color: #1e293b; line-height: 1.55; }
+    .notice-meta {
+      margin-top: 8px;
+      font-size: .78rem;
+      color: #94a3b8;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .notice-toggle {
+      margin-top: 10px;
+      font-size: .76rem;
+      color: #4f46e5;
+      font-weight: 600;
+      user-select: none;
+    }
+    /* 全文：默认折叠，点击平滑展开（max-height 过渡） */
+    .notice-body {
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height .32s ease, opacity .25s ease, margin-top .32s ease;
+      margin-top: 0;
+    }
+    .notice-card.open .notice-body {
+      max-height: 1200px;
+      opacity: 1;
+      margin-top: 12px;
+    }
+    .notice-body p {
+      font-size: .9rem;
+      color: #475569;
+      line-height: 1.9;
+      white-space: pre-wrap;
+    }
+    .notice-body a { color: #4f46e5; word-break: break-all; }
+    .notice-card.open { background: #fff; border-color: #c7d2fe; }
+
+    /* ---------- AI 搜索结果视图 ---------- */
+    .search-view {
+      display: none;
+      background: #fff;
+      border: 1px solid #eef2f7;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(30, 41, 59, .06);
+      padding: 20px;
+      animation: panelIn .2s ease both;
+    }
+    body.searching .search-view { display: block; }
+    .search-back {
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #475569;
+      font-family: inherit;
+      font-size: .82rem;
+      border-radius: 10px;
+      padding: 7px 14px;
+      cursor: pointer;
+      margin-bottom: 16px;
+      transition: all .15s ease;
+    }
+    .search-back:hover { color: #4f46e5; border-color: #c7d2fe; background: #f8faff; }
+    .search-heading { font-size: .95rem; font-weight: 700; color: #1e293b; margin-bottom: 12px; }
+
+    /* AI 总结卡（复用 ai-core.js 的本地多变文案思路） */
+    .ai-info-card {
+      border: 1px solid #c7d2fe;
+      background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+      border-radius: 13px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+    }
+    .ai-info-card.thinking { color: #6366f1; font-size: .92rem; }
+    .ai-info-card .ai-label {
+      display: block;
+      font-size: .8rem;
+      font-weight: 800;
+      color: #4f46e5;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .ai-info-card .ai-text { color: #4338ca; font-size: .92rem; line-height: 1.8; }
+    .search-view .notice-list { padding: 0; }
+
+    /* 无结果兜底 */
+    .search-empty {
+      text-align: center;
+      padding: 44px 20px;
+      color: #64748b;
+      font-size: .92rem;
+      line-height: 1.9;
+    }
+    .forum-go {
+      display: inline-block;
+      margin-top: 14px;
+      background: #4f46e5;
+      color: #fff;
+      text-decoration: none;
+      font-size: .86rem;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 9px 18px;
+      transition: background .15s ease;
+    }
+    .forum-go:hover { background: #4338ca; }
+
+    /* ---------- 右下角“AI导入”悬浮按钮（仅管理员可见） ---------- */
+    .import-fab {
+      position: fixed;
+      right: 26px;
+      bottom: 26px;
+      z-index: 900;
+      display: none;            /* 默认隐藏，role==='admin' 时由 JS 显示 */
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+    .import-fab.show { display: flex; }
+    .fab-btn {
+      border: none;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #fff;
+      font-family: inherit;
+      font-size: .9rem;
+      font-weight: 700;
+      border-radius: 50px;
+      padding: 12px 20px;
+      cursor: pointer;
+      box-shadow: 0 8px 22px rgba(79, 70, 229, .35);
+      transition: transform .15s ease, box-shadow .15s ease;
+      white-space: nowrap;
+    }
+    .fab-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(79, 70, 229, .45); }
+    /* AI 标识：放大、加粗、紫色渐变，醒目但不抢按钮 */
+    .fab-sub {
+      font-size: .82rem;
+      font-weight: 700;
+      letter-spacing: .5px;
+      background: linear-gradient(90deg, #7c3aed, #4f46e5);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      display: inline-flex;
+      align-items: center;
+    }
+    /* AI 导入说明 ❓ 图标（小圆圈，与 fab-sub 同行排列） */
+    .help-q {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #cbd5e1;
+      color: #fff;
+      font-size: .62rem;
+      font-weight: 800;
+      cursor: pointer;
+      margin-left: 5px;
+      user-select: none;
+      flex: none;
+      transition: background .2s ease, transform .2s ease;
+      /* 抵消 fab-sub 的文字渐变色，保持图标纯色 */
+      -webkit-background-clip: border-box;
+      background-clip: border-box;
+    }
+    .help-q:hover { background: #3b82f6; transform: scale(1.15); }
+
+    /* ---------- “导入信息”模态框 ---------- */
+    .modal-mask {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      background: rgba(15, 23, 42, .42);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-mask.open { display: flex; animation: maskIn .18s ease both; }
+    @keyframes maskIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal-card {
+      width: 520px;
+      max-width: 100%;
+      max-height: 88vh;
+      overflow-y: auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(15, 23, 42, .28);
+      padding: 24px 26px;
+      animation: modalIn .22s ease both;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(14px) scale(.98); }
+      to   { opacity: 1; transform: translateY(0)    scale(1); }
+    }
+    .modal-title { font-size: 1.08rem; font-weight: 800; color: #1e293b; margin-bottom: 18px; }
+    .field { margin-bottom: 16px; }
+    .field-label {
+      display: block;
+      font-size: .85rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 8px;
+    }
+    .radio-row { display: flex; gap: 20px; flex-wrap: wrap; }
+    .radio-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .88rem;
+      color: #334155;
+      cursor: pointer;
+    }
+    .modal-card input[type="text"],
+    .modal-card textarea,
+    .modal-card input[type="file"] {
+      width: 100%;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: .88rem;
+      color: #1e293b;
+      outline: none;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .modal-card textarea { min-height: 130px; resize: vertical; line-height: 1.7; }
+    .modal-card input[type="text"]:focus,
+    .modal-card textarea:focus {
+      border-color: #818cf8;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, .14);
+    }
+    .field-warn { margin-top: 7px; font-size: .75rem; color: #f87171; line-height: 1.6; }
+
+    /* ---------- AI 智能拟题面板（标题输入框下方） ---------- */
+    .ai-title-panel { margin-top: 10px; }
+    .ai-title-btn {
+      width: 100%;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: .86rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      border-radius: 10px;
+      padding: 10px 14px;
+      box-shadow: 0 4px 12px rgba(124, 58, 237, .28);
+      transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+    }
+    .ai-title-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(124, 58, 237, .38); }
+    .ai-title-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; box-shadow: 0 4px 12px rgba(124, 58, 237, .28); }
+    /* 结果区：左侧标题文本，右侧“换一个 / 应用” */
+    .ai-title-result {
+      display: none;
+      margin-top: 10px;
+      gap: 10px;
+      align-items: flex-start;
+      border: 1px solid #ddd6fe;
+      background: #faf5ff;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .ai-title-result.show { display: flex; }
+    .ai-title-text { flex: 1; min-width: 0; font-size: .86rem; color: #4c1d95; line-height: 1.6; word-break: break-word; }
+    /* 加载中：紫色提示，隐藏操作按钮 */
+    .ai-title-result.busy { border-color: #c4b5fd; background: #f5f3ff; }
+    .ai-title-result.busy .ai-title-text { color: #7c3aed; }
+    .ai-title-result.busy .ai-title-actions { display: none; }
+    /* 失败：红色提示，只保留“换一个”作为重试 */
+    .ai-title-result.error { border-color: #fecaca; background: #fef2f2; }
+    .ai-title-result.error .ai-title-text { color: #b91c1c; }
+    .ai-title-result.error .ai-title-apply { display: none; }
+    .ai-title-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+    .ai-title-mini {
+      border: 1px solid #c4b5fd;
+      background: #fff;
+      color: #6d28d9;
+      font-family: inherit;
+      font-size: .78rem;
+      font-weight: 600;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s ease;
+    }
+    .ai-title-mini:hover { background: #f5f3ff; }
+    .ai-title-mini:disabled { opacity: .55; cursor: not-allowed; }
+    .ai-title-apply { border-color: #7c3aed; background: #7c3aed; color: #fff; }
+    .ai-title-apply:hover { background: #6d28d9; }
+
+    /* ---------- AI 拆分双表单 ---------- */
+    .split-card { width: 580px; }
+    .split-desc { font-size: .84rem; color: #64748b; margin: 0 0 14px; line-height: 1.6; }
+    .split-part {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      background: #fafbfc;
+    }
+    .split-part-label { font-size: .78rem; font-weight: 700; color: #6d28d9; margin-bottom: 8px; }
+    .split-title {
+      width: 100%;
+      font-family: inherit;
+      font-size: .88rem;
+      font-weight: 600;
+      color: #1e293b;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+    }
+    .split-title:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, .1); }
+    .split-body {
+      width: 100%;
+      font-family: inherit;
+      font-size: .84rem;
+      color: #334155;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 10px;
+      resize: vertical;
+      box-sizing: border-box;
+      line-height: 1.7;
+    }
+    .split-body:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, .1); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+    .modal-btn {
+      border: none;
+      font-family: inherit;
+      font-size: .88rem;
+      font-weight: 600;
+      border-radius: 10px;
+      padding: 9px 18px;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .modal-cancel { background: #f1f5f9; color: #475569; }
+    .modal-cancel:hover { background: #e2e8f0; }
+    .modal-confirm { background: #4f46e5; color: #fff; }
+    .modal-confirm:hover { background: #4338ca; box-shadow: 0 4px 12px rgba(79, 70, 229, .3); }
+    .modal-confirm:disabled { opacity: .6; cursor: not-allowed; box-shadow: none; }
+
+    /* 轻提示 toast（AI 分析中 / 发布成功） */
+    .info-toast {
+      position: fixed;
+      top: 26px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-14px);
+      z-index: 9999;
+      background: rgba(30, 41, 59, .94);
+      color: #fff;
+      font-size: .88rem;
+      padding: 11px 22px;
+      border-radius: 50px;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, .3);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .22s ease, transform .22s ease;
+      white-space: nowrap;
+    }
+    .info-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 600px) {
+      .brand-title { font-size: 1.35rem; letter-spacing: 1px; }
+      .notice-card { width: 92%; padding: 16px; }
+      .tabs { gap: 6px; }
+      .tab-btn { font-size: .82rem; padding: 11px 4px; }
+      .ai-chip { display: none; }
+      .import-fab { right: 14px; bottom: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- ---------- 顶栏 ---------- -->
+  <div class="topbar">
+    <a class="back-home" href="index.html">← 返回首页</a>
+
+    <!-- 右上角 AI 搜索 -->
+    <div class="is-widget">
+      <button type="button" class="is-btn" id="isToggle">🔍 搜索</button>
+      <span class="ai-chip">✨ AI增强</span>
+      <div class="is-panel" id="isPanel">
+        <input type="text" id="isInput" placeholder="输入你想查询的校园信息，比如：绩点计算？">
+        <button type="button" class="is-go" id="isGo">搜索</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- 顶部官方标识区 -->
+    <header class="brand">
+      <div class="brand-title">🏛️ 重庆大学官方信息库</div>
+      <div class="brand-sub">CQU OFFICIAL INFORMATION</div>
+      <div class="brand-slogan">📢 为同学们提供最新、最准确的校园信息</div>
+    </header>
+
+    <!-- 三栏筛选导航（互斥高亮） -->
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab-btn active" data-tab="latest" role="tab">🕒 最新信息</button>
+      <button type="button" class="tab-btn" data-tab="hot" role="tab">🔥 热门信息</button>
+      <button type="button" class="tab-btn" data-tab="feedback" role="tab">💬 意见反馈</button>
+    </nav>
+
+    <!-- 常规内容区 -->
+    <section class="panel list-panel active" data-panel="latest" role="tabpanel">
+      <div id="latestList"></div>
+    </section>
+    <section class="panel list-panel" data-panel="hot" role="tabpanel">
+      <div id="hotList"></div>
+    </section>
+    <section class="panel feedback-panel" data-panel="feedback" role="tabpanel">
+      <div class="feedback-tip">你的每一条建议都会被认真对待 ✍️</div>
+      <textarea class="feedback-textarea" id="feedbackText" placeholder="匿名提交，给予学校最真实的反馈..."></textarea>
+      <div class="feedback-actions">
+        <button type="button" class="feedback-submit" id="feedbackSubmit">🚀 提交反馈</button>
+      </div>
+    </section>
+
+    <!-- AI 搜索结果视图（搜索时覆盖常规内容，无刷新） -->
+    <section class="search-view" id="searchView" hidden>
+      <button type="button" class="search-back" id="searchBack">← 返回列表</button>
+      <div class="search-heading" id="searchHeading"></div>
+      <div id="aiStatus"></div>
+      <div id="searchList"></div>
+    </section>
+  </div>
+
+  <!-- ---------- 右下角悬浮按钮（仅管理员可见，由 JS 加 .show） ---------- -->
+  <div class="import-fab" id="importFab">
+    <button type="button" class="fab-btn" id="importBtn">📥 导入最新信息</button>
+    <span class="fab-sub">✨ AI自动分类与拟题<span class="help-q" id="helpAiImport" title="AI智能分类与拟题说明">?</span></span>
+  </div>
+
+  <!-- ---------- AI 导入说明弹窗（右下角 ❓ 触发） ---------- -->
+  <div class="modal-mask" id="aiImportTipMask" role="dialog" aria-modal="true">
+    <div class="modal-card" style="width:440px;">
+      <div class="modal-title">💡 AI智能分类与拟题</div>
+      <p style="font-size:.88rem;color:#475569;line-height:1.9;margin:0 0 18px;">当您上传或粘贴大段通知文本时，AI会自动分析文本主题。如果发现文本包含两个以上独立主题，会提示您是否将其拆分为多条信息，并分别为每条拟定官方公文标题。若主题单一，则直接生成标题填入输入框。</p>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-confirm" id="aiImportTipOk">好的，我知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- “导入信息”模态框 ---------- -->
+  <div class="modal-mask" id="importMask" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+    <div class="modal-card">
+      <div class="modal-title" id="importModalTitle">📥 导入最新信息</div>
+
+      <!-- 导入方式 -->
+      <div class="field">
+        <span class="field-label">选择导入方式：</span>
+        <div class="radio-row">
+          <label><input type="radio" name="importWay" value="file"> 📁 上传文件</label>
+          <label><input type="radio" name="importWay" value="paste" checked> 📝 手动复制粘贴</label>
+        </div>
+      </div>
+
+      <!-- 文件上传区（默认隐藏） -->
+      <div class="field" id="fileField" hidden>
+        <input type="file" id="importFile" accept=".txt,.doc,.docx,.pdf">
+      </div>
+
+      <!-- 手动粘贴区（默认显示） -->
+      <div class="field" id="pasteField">
+        <textarea id="importBody" placeholder="在此粘贴或输入信息全文..."></textarea>
+      </div>
+
+      <!-- 标题（必填；可用下方 AI 智能拟题，也可随时手动输入） -->
+      <div class="field">
+        <input type="text" id="importTitle" placeholder="请输入标题...">
+        <div class="ai-title-panel">
+          <button type="button" class="ai-title-btn" id="aiTitleBtn">✨ AI智能拟题</button>
+          <div class="ai-title-result" id="aiTitleResult">
+            <div class="ai-title-text" id="aiTitleText"></div>
+            <div class="ai-title-actions">
+              <button type="button" class="ai-title-mini" id="aiTitleRetry">🔄 换一个</button>
+              <button type="button" class="ai-title-mini ai-title-apply" id="aiTitleApply">✅ 应用</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底部按钮 -->
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-cancel" id="importCancel">❌ 取消</button>
+        <button type="button" class="modal-btn modal-confirm" id="importConfirm">✅ 确认发布</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- AI 拆分双表单模态框（AI检测到两个主题时弹出） ---------- -->
+  <div class="modal-mask" id="splitMask" role="dialog" aria-modal="true">
+    <div class="modal-card split-card">
+      <div class="modal-title">🤖 AI已拆分为两条信息</div>
+      <p class="split-desc">AI 检测到两个不同的主题，请分别确认标题和内容后一次性发布。</p>
+
+      <div class="split-part">
+        <div class="split-part-label">📌 第一条</div>
+        <input type="text" class="split-title" id="split1Title" placeholder="第一条标题">
+        <textarea class="split-body" id="split1Body" rows="4" placeholder="第一条内容"></textarea>
+      </div>
+
+      <div class="split-part">
+        <div class="split-part-label">📌 第二条</div>
+        <input type="text" class="split-title" id="split2Title" placeholder="第二条标题">
+        <textarea class="split-body" id="split2Body" rows="4" placeholder="第二条内容"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="modal-btn modal-cancel" id="splitCancel">❌ 取消</button>
+        <button type="button" class="modal-btn modal-confirm" id="splitConfirm">✅ 确认发布两条</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 轻提示 -->
+  <div class="info-toast" id="infoToast"></div>
+
+  <script>
+    // ---------- 预设通知公告数据（写死，后续可替换为接口/localStorage） ----------
+    const NOTICES = [
+      {
+        title: '《关于举办“重庆大学AI开学季校园智能体创新挑战赛”的通知》',
+        date: '2026-09-30',
+        views: 328,
+        org: '重庆大学教务处',
+        // 用 {url} 占位，渲染时转成可点击链接，避免 XSS（其余内容均 textContent）
+        body: '活动主题：AI开学，创新开场。\n参与对象：2026级大一新生（仅个人参赛）。\n作品要求：从生活助手、校园攻略、学习生活、实习就业四大主题择一，完成AI应用作品（H5、智能体等）。\n征集时间：即日起至10月31日。\n奖励：一等奖2000积分+校级证书+Nova校园大使推荐。\n报名及提交：需提交作品链接、设计说明和60秒演示视频。详情请登录学校课程中心（{url}）在‘其他平台资源’查阅。',
+        url: 'https://courses.cqu.edu.cn'
+      },
+      {
+        title: '《AI创新挑战赛奖励机制与学分置换说明》',
+        date: '2026-09-30',
+        views: 156,
+        org: '重庆大学教务处',
+        body: '本次挑战赛不设现金奖。积分奖励可在WorkBuddy平台兑换算力资源。参赛并按要求提交作品，可按照《人工智能通识》课程报告规范整理成文档，认定为课程1个实验任务。获奖同学提交获奖证明和报告，可认定《人工智能通识》实验成绩合格。一等奖同学将获得‘腾讯WorkBuddy Nova校园大使’推荐权益。'
+      }
+    ];
+
+    // 热门信息预设数据（高浏览量）
+    const HOT_NOTICES = [
+      {
+        title: '《重庆大学本科生课程绩点计算方法说明》',
+        date: '2010年6月',
+        views: 13520,
+        org: '重庆大学教务处',
+        body: '重庆大学本科生绩点采用5分制。必修课和限选课成绩参与绩点计算，任选课成绩不计入绩点。具体换算公式为：课程绩点 = (课程成绩 - 50) / 10。若课程成绩低于60分，课程绩点为0。最终平均学分绩点（GPA） = ∑(课程绩点 × 课程学分) / ∑课程学分。'
+      },
+      {
+        title: '《全国大学英语四六级考试（CET）笔试报名流程说明》',
+        date: '2012年3月',
+        views: 28640,
+        org: '重庆大学教务处',
+        body: '全国大学英语四、六级考试笔试采用网上报名方式。考生需登录全国网上报名系统（cet-bm.neea.edu.cn），首次登录请先注册ETEST通行证。登录后进行资格验证，确认个人学籍信息无误。随后选择报考科目（四级/六级），完成网上缴费（支持支付宝、中银智慧付等）。请注意：报考六级需四级成绩达到425分及以上。缴费须在24小时内完成，否则报考失效。逾期不再安排补报名。'
+      },
+      {
+        title: '《重庆大学电气工程学院简介》',
+        date: '2015年9月',
+        views: 31520,
+        org: '重庆大学电气工程学院',
+        body: '重庆大学电气工程学院始建于1935年，是学校历史最悠久、实力最雄厚的学院之一。学院拥有‘电气工程’国家重点一级学科，2017年及2022年均入选国家‘双一流’建设学科，第四轮学科评估获评A-。学院拥有输变电装备技术全国重点实验室等三大国家级科研平台，师资力量雄厚，含中国工程院外籍院士、IEEE Fellow等国家级人才。学院致力于培养电气工程领域卓越人才，为‘西电东送’‘川藏铁路’等国家重大工程提供关键技术支撑。'
+      }
+    ];
+
+    // 用户通过“AI导入”发布的信息（localStorage 持久化，排在“最新信息”最前）
+    const USER_NOTICE_KEY = 'infoUserNotices';
+    let USER_NOTICES = [];
+    try {
+      USER_NOTICES = JSON.parse(localStorage.getItem(USER_NOTICE_KEY)) || [];
+    } catch (e) { USER_NOTICES = []; }
+
+    // “最新信息”完整列表 = 用户导入（最新在前）+ 预设
+    function getLatestNotices() { return USER_NOTICES.concat(NOTICES); }
+    // 全库信息（AI 搜索范围 = 用户导入 + 最新 + 热门）
+    function getAllNotices() { return USER_NOTICES.concat(NOTICES, HOT_NOTICES); }
+
+    // ---------- 通知卡片构造（列表与搜索结果共用，保证排版完全一致） ----------
+    function createNoticeCard(n) {
+      const card = document.createElement('article');
+      card.className = 'notice-card';
+
+      const title = document.createElement('div');
+      title.className = 'notice-title';
+      title.textContent = n.title;
+
+      const meta = document.createElement('div');
+      meta.className = 'notice-meta';
+      const mDate = document.createElement('span');
+      mDate.textContent = '🕒 ' + n.date;
+      const mViews = document.createElement('span');
+      mViews.textContent = '👀 浏览 ' + n.views + ' 人';
+      const mOrg = document.createElement('span');
+      mOrg.textContent = '🏛️ ' + n.org;
+      meta.append(mDate, mViews, mOrg);
+
+      const toggle = document.createElement('div');
+      toggle.className = 'notice-toggle';
+      toggle.textContent = '▸ 点击查看全文';
+
+      const body = document.createElement('div');
+      body.className = 'notice-body';
+      const p = document.createElement('p');
+      // 正文按 {url} 拆分：纯文本走 textContent，链接单独建 a 标签
+      const parts = n.body.split('{url}');
+      parts.forEach((seg, i) => {
+        p.appendChild(document.createTextNode(seg));
+        if (i < parts.length - 1) {
+          const a = document.createElement('a');
+          a.href = n.url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.textContent = n.url;
+          p.appendChild(a);
+        }
+      });
+      body.appendChild(p);
+
+      card.append(title, meta, toggle, body);
+
+      // 点击卡片平滑展开/再次点击折叠（无刷新；点击链接不触发折叠）
+      card.addEventListener('click', e => {
+        if (e.target.closest('a')) return;
+        const open = card.classList.toggle('open');
+        toggle.textContent = open ? '▾ 收起全文' : '▸ 点击查看全文';
+      });
+      return card;
+    }
+
+    // 渲染信息列表到指定容器
+    function renderNoticeList(data, wrapId) {
+      const wrap = document.getElementById(wrapId);
+      wrap.innerHTML = '';
+      const list = document.createElement('div');
+      list.className = 'notice-list';
+      data.forEach(n => list.appendChild(createNoticeCard(n)));
+      wrap.appendChild(list);
+    }
+    renderNoticeList(getLatestNotices(), 'latestList');
+    renderNoticeList(HOT_NOTICES, 'hotList');
+
+    // ---------- Tab 互斥切换（纯前端，无刷新；同一时刻仅一个高亮） ----------
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const panels = document.querySelectorAll('.panel');
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.tab;
+        tabBtns.forEach(b => b.classList.toggle('active', b === btn));
+        panels.forEach(p => p.classList.toggle('active', p.dataset.panel === target));
+      });
+    });
+
+    // ---------- 意见反馈（纯前端模拟：提示后清空，不保存数据、不刷新） ----------
+    document.getElementById('feedbackSubmit').addEventListener('click', () => {
+      window.alert('✅ 感谢您的反馈！我们会认真聆听并改进。');
+      document.getElementById('feedbackText').value = '';   // 点“确定”后清空输入框
+    });
+
+    // ---------- ✨ AI 搜索（统一走 ai-core.js 的 askAI，板块隔离：只传信息库通知） ----------
+    // 关键词匹配：标题 / 发布单位 / 全文 任一命中即可
+    function noticeMatches(n, kw) {
+      return (n.title || '').toLowerCase().includes(kw)
+        || (n.org || '').toLowerCase().includes(kw)
+        || (n.body || '').toLowerCase().includes(kw);
+    }
+
+    const isToggle = document.getElementById('isToggle');
+    const isPanel = document.getElementById('isPanel');
+    const isInput = document.getElementById('isInput');
+    const isGo = document.getElementById('isGo');
+    const searchView = document.getElementById('searchView');
+    const searchHeading = document.getElementById('searchHeading');
+    const aiStatus = document.getElementById('aiStatus');
+    const searchList = document.getElementById('searchList');
+
+    // 展开/收起搜索浮层
+    isToggle.addEventListener('click', e => {
+      e.stopPropagation();
+      isPanel.classList.toggle('open');
+      if (isPanel.classList.contains('open')) {
+        requestAnimationFrame(() => isInput.focus());
+      }
+    });
+    isPanel.addEventListener('click', e => e.stopPropagation());
+    // 点页面其他空白处自动收起
+    document.addEventListener('click', e => {
+      if (!isPanel.classList.contains('open')) return;
+      if (isPanel.contains(e.target) || e.target === isToggle) return;
+      isPanel.classList.remove('open');
+    });
+
+    function enterSearchView() {
+      searchView.hidden = false;
+      document.body.classList.add('searching');
+    }
+    function exitSearchView() {
+      document.body.classList.remove('searching');
+      searchView.hidden = true;
+      isPanel.classList.remove('open');
+    }
+    document.getElementById('searchBack').addEventListener('click', exitSearchView);
+
+    async function runInfoSearch() {
+      const kw = isInput.value.trim().toLowerCase();
+      if (!kw) { window.alert('请输入要查询的关键词。'); isInput.focus(); return; }
+
+      isPanel.classList.remove('open');
+      enterSearchView();
+      searchHeading.textContent = `「${isInput.value.trim()}」的搜索结果`;
+      searchList.innerHTML = '';
+      // 1) 先显示“AI 正在查阅”
+      aiStatus.className = 'ai-info-card thinking';
+      aiStatus.textContent = '🤖 AI正在查阅校园信息库...';
+
+      // 2) 全库筛选（只把信息库通知作为上下文传给 AI，实现板块数据隔离）
+      const matched = getAllNotices().filter(n => noticeMatches(n, kw));
+
+      // 3) 先把 AI 总结卡片骨架搭好（内容区逐字输出，保持间距/排版不抖动）
+      aiStatus.className = 'ai-info-card';
+      aiStatus.innerHTML = '';
+      const label = document.createElement('span');
+      label.className = 'ai-label';
+      label.textContent = '【AI智能总结】';
+      const txt = document.createElement('div');
+      txt.className = 'ai-text';
+      aiStatus.append(label, txt);
+
+      // 流式总结：真实 API 逐块到达，失败/断网 ai-core 自动降级本地模板并模拟逐字
+      let streamed = '';
+      const typer = createTextTyper(piece => { streamed += piece; txt.textContent = streamed; });
+      const summary = await askAIStream(isInput.value.trim(), matched, 'search', delta => typer.feed(delta));
+      await typer.finish();
+      txt.textContent = summary;   // 最终以完整文本兜底一次，防止半包字符
+
+      if (matched.length === 0) {
+        // 兜底：AI 统一未命中话术 + 跳转论坛入口
+        const empty = document.createElement('div');
+        empty.className = 'search-empty';
+        const tip = document.createElement('div');
+        tip.textContent = '😵 信息库中暂时没有匹配的内容。';
+        const forumLink = document.createElement('a');
+        forumLink.className = 'forum-go';
+        forumLink.href = 'forum.html';
+        forumLink.textContent = '💬 去论坛发帖问问';
+        empty.append(tip, forumLink);
+        searchList.appendChild(empty);
+        return;
+      }
+
+      // 4) 匹配卡片（与列表页同款卡片，可展开全文）
+      const list = document.createElement('div');
+      list.className = 'notice-list';
+      matched.forEach(n => list.appendChild(createNoticeCard(n)));
+      searchList.appendChild(list);
+    }
+
+    isGo.addEventListener('click', runInfoSearch);
+    isInput.addEventListener('keydown', e => { if (e.key === 'Enter') runInfoSearch(); });
+
+    // ================= AI 导入最新信息（仅管理员） =================
+    const importFab = document.getElementById('importFab');
+    const importBtn = document.getElementById('importBtn');
+    const importMask = document.getElementById('importMask');
+    const importCancel = document.getElementById('importCancel');
+    const importConfirm = document.getElementById('importConfirm');
+    const fileField = document.getElementById('fileField');
+    const pasteField = document.getElementById('pasteField');
+    const importFile = document.getElementById('importFile');
+    const importBody = document.getElementById('importBody');
+    const importTitle = document.getElementById('importTitle');
+    const infoToast = document.getElementById('infoToast');
+    const wayRadios = document.querySelectorAll('input[name="importWay"]');
+
+    // 仅管理员可见悬浮按钮（普通用户完全隐藏）
+    if ((localStorage.getItem('role') || 'user') === 'admin') {
+      importFab.classList.add('show');
+    }
+
+    // toast 轻提示（autoMs 后自动消失，<=0 不自动消失）
+    let toastTimer = null;
+    function showToast(msg, autoMs = 2200) {
+      infoToast.textContent = msg;
+      infoToast.classList.add('show');
+      clearTimeout(toastTimer);
+      if (autoMs > 0) toastTimer = setTimeout(() => infoToast.classList.remove('show'), autoMs);
+    }
+    function hideToast() { infoToast.classList.remove('show'); }
+
+    // 重置模态框表单
+    function resetImportForm() {
+      importTitle.value = '';
+      importBody.value = '';
+      importFile.value = '';
+      wayRadios.forEach(r => { r.checked = (r.value === 'paste'); });
+      fileField.hidden = true;
+      pasteField.hidden = false;
+      importConfirm.disabled = false;
+      resetAiTitle();
+    }
+
+    // ---------- ✨ AI 智能拟题（自定义公文助手 prompt，统一走 ai-core.js 的 /api/ai） ----------
+    const aiTitleBtn = document.getElementById('aiTitleBtn');
+    const aiTitleResult = document.getElementById('aiTitleResult');
+    const aiTitleText = document.getElementById('aiTitleText');
+    const aiTitleRetry = document.getElementById('aiTitleRetry');
+    const aiTitleApply = document.getElementById('aiTitleApply');
+    const AI_TITLE_SYSTEM = '分析用户提供的文本。如果文本包含两个差异较大的主题（例如两篇完全不同的通知），请将文本分割为两部分，并分别为两部分拟定一个标题。请严格返回JSON格式：{ "split": true, "part1_content": "...", "part1_title": "...", "part2_content": "...", "part2_title": "..." }。如果内容主题单一，返回 { "split": false, "part1_content": "原文本", "part1_title": "拟定标题" }。不要包含任何额外的解释。';
+    let aiTitleBusy = false;      // 防重复提交
+    let aiTitleCurrent = '';      // 最近一次成功生成的标题
+
+    // 收起结果区、恢复按钮可用（不影响标题输入框里已应用/已手动输入的内容）
+    function resetAiTitle() {
+      aiTitleBusy = false;
+      aiTitleCurrent = '';
+      aiTitleBtn.disabled = false;
+      aiTitleRetry.disabled = false;
+      aiTitleResult.classList.remove('show', 'busy', 'error');
+      aiTitleText.textContent = '';
+    }
+
+    async function generateAiTitle() {
+      // 1) 读取 textarea 全文，为空直接提示（不发请求）
+      const content = importBody.value.trim();
+      if (!content) {
+        window.alert('请先输入信息全文，再使用AI拟题功能！');
+        importBody.focus();
+        return;
+      }
+      if (aiTitleBusy) return;
+      aiTitleBusy = true;
+
+      // 2) 加载态：🤖 AI正在拟题...（同时禁用按钮，避免重复请求）
+      aiTitleBtn.disabled = true;
+      aiTitleRetry.disabled = true;
+      aiTitleResult.classList.add('show', 'busy');
+      aiTitleResult.classList.remove('error');
+      aiTitleText.textContent = '🤖 AI正在拟题...';
+
+      try {
+        // 3) 流式请求本站 /api/ai：原始 JSON 在后台逐块收集，不把半截 JSON 显示给用户
+        let raw = '';
+        await callAIAPIStream(
+          [
+            { role: 'system', content: AI_TITLE_SYSTEM },
+            { role: 'user', content: `通知全文：\n${content}` }
+          ],
+          delta => { raw += delta; }
+        );
+        raw = raw.trim();
+
+        // 4) 尝试解析 AI 返回的 JSON（智能分类切割）
+        let parsed = null;
+        try {
+          // 去掉可能的 markdown 代码围栏
+          const cleaned = raw.replace(/```(?:json)?\s*/g, '').replace(/```/g, '').trim();
+          parsed = JSON.parse(cleaned);
+        } catch (_) {
+          parsed = null;
+        }
+
+        // 标题在结果区逐字输出（打字机），保持卡片排版不变
+        function typeTitle(title) {
+          aiTitleCurrent = title;
+          aiTitleResult.classList.remove('busy', 'error');
+          aiTitleText.textContent = '';
+          const typer = createTextTyper(piece => { aiTitleText.textContent += piece; }, 30, 2);
+          typer.feed(title);
+          return typer.finish();
+        }
+
+        if (parsed && typeof parsed === 'object' && parsed.part1_title) {
+          if (parsed.split === true && parsed.part2_title) {
+            // AI 检测到两个主题 → 询问用户是否拆分
+            resetAiTitle();
+            const doSplit = window.confirm('🤖 AI发现您输入的信息包含两个不同的主题，是否将其拆分为两条信息分别发布？');
+            if (doSplit) {
+              // 确定 → 清空输入框，弹出拆分双表单
+              importBody.value = '';
+              importTitle.value = '';
+              openSplitModal(parsed.part1_title, parsed.part1_content, parsed.part2_title, parsed.part2_content);
+              return;
+            }
+            // 取消 → 保留原文，只把 part1 标题填入标题框
+            importTitle.value = parsed.part1_title;
+            importTitle.focus();
+            return;
+          }
+          // split=false 或 split=true 但缺 part2 → 单标题逐字输出
+          await typeTitle(parsed.part1_title);
+          return;
+        }
+
+        // JSON 解析失败 → 退化为纯文本标题，同样逐字输出
+        await typeTitle(raw);
+      } catch (err) {
+        // 4) 失败兜底：结果区提示，并保留手动输入能力；“换一个”可重试
+        console.warn('[search] AI拟题失败：', err);
+        aiTitleResult.classList.remove('busy');
+        aiTitleResult.classList.add('error');
+        aiTitleText.textContent = 'AI当前繁忙，请手动输入标题。';
+      } finally {
+        aiTitleBusy = false;
+        aiTitleBtn.disabled = false;
+        aiTitleRetry.disabled = false;
+      }
+    }
+
+    aiTitleBtn.addEventListener('click', generateAiTitle);
+    aiTitleRetry.addEventListener('click', generateAiTitle);   // “换一个”= 重新请求生成
+    aiTitleApply.addEventListener('click', () => {
+      if (!aiTitleCurrent) return;
+      importTitle.value = aiTitleCurrent;     // 直接填入上方标题输入框
+      resetAiTitle();                         // 收起结果区
+      importTitle.focus();
+    });
+
+    // ---------- AI 拆分双表单（split=true 时弹出） ----------
+    const splitMask = document.getElementById('splitMask');
+    const split1Title = document.getElementById('split1Title');
+    const split1Body = document.getElementById('split1Body');
+    const split2Title = document.getElementById('split2Title');
+    const split2Body = document.getElementById('split2Body');
+    const splitCancel = document.getElementById('splitCancel');
+    const splitConfirm = document.getElementById('splitConfirm');
+
+    function openSplitModal(t1, c1, t2, c2) {
+      split1Title.value = t1 || '';
+      split1Body.value = c1 || '';
+      split2Title.value = t2 || '';
+      split2Body.value = c2 || '';
+      splitMask.classList.add('open');
+    }
+    function closeSplitModal() { splitMask.classList.remove('open'); }
+
+    splitCancel.addEventListener('click', closeSplitModal);
+    splitMask.addEventListener('click', e => { if (e.target === splitMask) closeSplitModal(); });
+
+    splitConfirm.addEventListener('click', () => {
+      const t1 = split1Title.value.trim();
+      const c1 = split1Body.value.trim();
+      const t2 = split2Title.value.trim();
+      const c2 = split2Body.value.trim();
+      if (!t1 || !t2) { window.alert('两条信息都需要标题。'); return; }
+      if (!c1 || !c2) { window.alert('两条信息都需要内容。'); return; }
+
+      splitConfirm.disabled = true;
+      showToast('🤖 AI正在分析内容并分类...', 0);
+
+      setTimeout(() => {
+        const now = nowText();
+        const mk = (title, body) => ({
+          id: 'user_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          title: title.startsWith('《') ? title : `《${title}》`,
+          date: now,
+          views: Math.floor(Math.random() * 491) + 10,
+          org: '重庆大学教务处',
+          body
+        });
+        // 先 push 第二条再 push 第一条，保证第一条在最前
+        USER_NOTICES.unshift(mk(t2, c2));
+        USER_NOTICES.unshift(mk(t1, c1));
+        try { localStorage.setItem(USER_NOTICE_KEY, JSON.stringify(USER_NOTICES)); } catch (e) {}
+
+        closeSplitModal();
+        closeImportModal();
+        resetImportForm();
+        splitConfirm.disabled = false;
+        if (document.body.classList.contains('searching')) exitSearchView();
+        renderNoticeList(getLatestNotices(), 'latestList');
+        switchTab('latest');
+        hideToast();
+        showToast("✅ 两条信息发布成功！已同步至'最新信息'列表。", 2600);
+      }, 1500);
+    });
+    function openImportModal() {
+      resetImportForm();
+      importMask.classList.add('open');
+      setTimeout(() => importTitle.focus(), 60);
+    }
+    function closeImportModal() {
+      importMask.classList.remove('open');
+    }
+
+    importBtn.addEventListener('click', openImportModal);
+    importCancel.addEventListener('click', closeImportModal);
+    // 点击遮罩空白处关闭（点卡片内部不关闭）
+    importMask.addEventListener('click', e => { if (e.target === importMask) closeImportModal(); });
+
+    // ---------- AI 导入说明弹窗（右下角 ❓ 触发） ----------
+    const aiImportTipMask = document.getElementById('aiImportTipMask');
+    const helpAiImport = document.getElementById('helpAiImport');
+    const aiImportTipOk = document.getElementById('aiImportTipOk');
+    function openAiImportTip() { aiImportTipMask.classList.add('open'); }
+    function closeAiImportTip() { aiImportTipMask.classList.remove('open'); }
+    helpAiImport.addEventListener('click', e => { e.stopPropagation(); openAiImportTip(); });
+    aiImportTipOk.addEventListener('click', closeAiImportTip);
+    aiImportTipMask.addEventListener('click', e => { if (e.target === aiImportTipMask) closeAiImportTip(); });
+
+    // 导入方式互斥切换：文件 / 粘贴
+    wayRadios.forEach(r => {
+      r.addEventListener('change', () => {
+        const isFile = (document.querySelector('input[name="importWay"]:checked') || {}).value === 'file';
+        fileField.hidden = !isFile;
+        pasteField.hidden = isFile;
+      });
+    });
+
+    // 当前时间格式：YYYY-MM-DD HH:mm
+    function nowText() {
+      const d = new Date();
+      const p = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
+    // 读取导入内容：.txt 读真实文本；doc/docx/pdf 纯前端无法解析，以文件名生成模拟正文
+    function readImportContent() {
+      const isFile = (document.querySelector('input[name="importWay"]:checked') || {}).value === 'file';
+      if (!isFile) {
+        return Promise.resolve(importBody.value.trim());
+      }
+      const file = importFile.files && importFile.files[0];
+      if (!file) return Promise.resolve('');
+      return new Promise(resolve => {
+        if (/\.txt$/i.test(file.name)) {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || '').trim());
+          reader.onerror = () => resolve('');
+          reader.readAsText(file, 'utf-8');
+        } else {
+          // 二进制文档（doc/docx/pdf）演示环境不解析，保留文件名作为内容凭证
+          resolve(`【文件导入】${file.name}\n（演示环境暂不解析 doc/docx/pdf 二进制正文，发布后以原文件内容为准。）`);
+        }
+      });
+    }
+
+    // 切到指定 Tab（复用既有互斥逻辑，不刷新）
+    function switchTab(target) {
+      tabBtns.forEach(b => {
+        if (b.dataset.tab === target) b.click();
+      });
+    }
+
+    // 确认发布：校验 → AI 分析提示 → 1.5s 后写入并刷新列表
+    importConfirm.addEventListener('click', async () => {
+      const title = importTitle.value.trim();
+      if (!title) { window.alert('请输入标题。'); importTitle.focus(); return; }
+      const content = await readImportContent();
+      if (!content) {
+        window.alert('请先上传文件，或在输入框中粘贴信息全文。');
+        return;
+      }
+
+      importConfirm.disabled = true;
+      // 1) AI 分析中
+      showToast('🤖 AI正在分析内容并分类...', 0);
+
+      setTimeout(() => {
+        // 2) 组装新信息（浏览量随机、单位默认教务处、当前时间）
+        const item = {
+          id: 'user_' + Date.now(),
+          title: title.startsWith('《') ? title : `《${title}》`,
+          date: nowText(),
+          views: Math.floor(Math.random() * 491) + 10,   // 10 ~ 500 随机
+          org: '重庆大学教务处',
+          body: content
+        };
+        // 3) push 到数组最前并持久化
+        USER_NOTICES.unshift(item);
+        try { localStorage.setItem(USER_NOTICE_KEY, JSON.stringify(USER_NOTICES)); } catch (e) {}
+
+        // 4) 关闭模态框、无刷新刷新“最新信息”列表（新信息在第一位）
+        closeImportModal();
+        resetImportForm();
+        if (document.body.classList.contains('searching')) exitSearchView();
+        renderNoticeList(getLatestNotices(), 'latestList');
+        switchTab('latest');
+
+        // 5) 成功提示
+        hideToast();
+        showToast("✅ 发布成功！信息已同步至‘最新信息’列表。", 2600);
+      }, 1500);
+    });
+  </script>
+</body>
+</html>
